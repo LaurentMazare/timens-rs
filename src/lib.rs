@@ -7,15 +7,19 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeNs(i64);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SpanNs(i64);
 
 macro_rules! span_conv {
-    ($to_fn:ident, $of_fn: ident, $cst: ident, $e: expr) => {
+    ($to_fn:ident, $of_fn_int:ident, $of_fn: ident, $cst: ident, $e: expr) => {
         pub const $cst: Self = Self($e);
 
         pub fn $to_fn(self) -> f64 {
             self.0 as f64 / $e as f64
+        }
+
+        pub fn $of_fn_int(i: i64) -> Self {
+            Self((i * $e) as i64)
         }
 
         pub fn $of_fn(f: f64) -> Self {
@@ -27,13 +31,21 @@ macro_rules! span_conv {
 impl SpanNs {
     pub const ZERO: Self = Self(0);
 
-    span_conv!(to_ns, of_ns, NS, 1);
-    span_conv!(to_us, of_us, US, 1000);
-    span_conv!(to_ms, of_ms, MS, 1_000_000);
-    span_conv!(to_sec, of_sec, SEC, 1_000_000_000);
-    span_conv!(to_min, of_min, MIN, 60_000_000_000i64);
-    span_conv!(to_hr, of_hr, HR, 3_600_000_000_000i64);
-    span_conv!(to_day, of_day, DAY, 24 * 3_600_000_000_000i64);
+    span_conv!(to_ns, of_int_ns, of_ns, NS, 1);
+    span_conv!(to_us, of_int_us, of_us, US, 1000);
+    span_conv!(to_ms, of_int_ms, of_ms, MS, 1_000_000);
+    span_conv!(to_sec, of_int_sec, of_sec, SEC, 1_000_000_000);
+    span_conv!(to_min, of_int_min, of_min, MIN, 60_000_000_000i64);
+    span_conv!(to_hr, of_int_hr, of_hr, HR, 3_600_000_000_000i64);
+    span_conv!(to_day, of_int_day, of_day, DAY, 24 * 3_600_000_000_000i64);
+
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
+
+    pub fn neg(self) -> Self {
+        Self(-self.0)
+    }
 
     pub fn is_positive(self) -> bool {
         self.0 > 0
@@ -49,6 +61,74 @@ impl SpanNs {
 
     pub fn is_non_positive(self) -> bool {
         self.0 <= 0
+    }
+}
+
+fn remove_trailing_zeros(value: i64, max_digits: usize) -> (i64, usize) {
+    let mut max_digits = max_digits;
+    let mut value = value;
+    while value % 10 == 0 {
+        value /= 10;
+        max_digits -= 1;
+    }
+    (value, max_digits)
+}
+
+impl std::fmt::Display for SpanNs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let ns = self.0;
+        if ns == 0 {
+            write!(f, "0s")?
+        } else {
+            if ns < 0 {
+                write!(f, "-")?
+            }
+            let mut ns = ns.abs();
+            if ns >= Self::DAY.0 {
+                let days = ns / Self::DAY.0;
+                write!(f, "{}d", days)?;
+                ns -= days * Self::DAY.0;
+            }
+            if ns >= Self::HR.0 {
+                let hr = ns / Self::HR.0;
+                write!(f, "{}h", hr)?;
+                ns -= hr * Self::HR.0;
+            }
+            if ns >= Self::MIN.0 {
+                let min = ns / Self::MIN.0;
+                write!(f, "{}m", min)?;
+                ns -= min * Self::MIN.0;
+            }
+            if ns == 0 {
+            } else if ns < 1_000 {
+                write!(f, "{}ns", ns)?
+            } else if ns < 1_000_000 {
+                write!(f, "{}", ns / 1000)?;
+                let rem_ns = ns % 1000;
+                if rem_ns != 0 {
+                    let (rem_ns, width) = remove_trailing_zeros(rem_ns, 3);
+                    write!(f, ".{:0width$}", rem_ns, width = width)?;
+                }
+                write!(f, "us")?;
+            } else if ns < 1_000_000_000 {
+                write!(f, "{}", ns / 1000_000)?;
+                let rem_ns = ns % 1000_000;
+                if rem_ns != 0 {
+                    let (rem_ns, width) = remove_trailing_zeros(rem_ns, 6);
+                    write!(f, ".{:0width$}", rem_ns, width = width)?;
+                }
+                write!(f, "ms")?;
+            } else {
+                write!(f, "{}", ns / 1000_000_000)?;
+                let rem_ns = ns % 1000_000_000;
+                if rem_ns != 0 {
+                    let (rem_ns, width) = remove_trailing_zeros(rem_ns, 9);
+                    write!(f, ".{:0width$}", rem_ns, width = width)?;
+                }
+                write!(f, "s")?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -205,14 +285,5 @@ impl TimeNs {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
     }
 }
