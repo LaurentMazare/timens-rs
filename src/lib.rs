@@ -10,17 +10,45 @@ pub struct TimeNs(i64);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SpanNs(i64);
 
+macro_rules! span_conv {
+    ($to_fn:ident, $of_fn: ident, $cst: ident, $e: expr) => {
+        pub const $cst: Self = Self($e);
+
+        pub fn $to_fn(self) -> f64 {
+            self.0 as f64 / $e as f64
+        }
+
+        pub fn $of_fn(f: f64) -> Self {
+            Self((f * $e as f64) as i64)
+        }
+    };
+}
+
 impl SpanNs {
     pub const ZERO: Self = Self(0);
-    pub const NS: Self = Self(1);
-    pub const US: Self = Self(1_000);
-    pub const MS: Self = Self(1_000_000);
-    pub const SEC: Self = Self(1_000_000_000);
-    pub const MIN: Self = Self(60 * 1_000_000_000);
-    pub const HR: Self = Self(3600 * 1_000_000_000);
 
-    pub fn to_sec(self) -> f64 {
-        self.0 as f64 / Self::SEC.0 as f64
+    span_conv!(to_ns, of_ns, NS, 1);
+    span_conv!(to_us, of_us, US, 1000);
+    span_conv!(to_ms, of_ms, MS, 1_000_000);
+    span_conv!(to_sec, of_sec, SEC, 1_000_000_000);
+    span_conv!(to_min, of_min, MIN, 60_000_000_000i64);
+    span_conv!(to_hr, of_hr, HR, 3_600_000_000_000i64);
+    span_conv!(to_day, of_day, DAY, 24 * 3_600_000_000_000i64);
+
+    pub fn is_positive(self) -> bool {
+        self.0 > 0
+    }
+
+    pub fn is_non_negative(self) -> bool {
+        self.0 >= 0
+    }
+
+    pub fn is_negative(self) -> bool {
+        self.0 < 0
+    }
+
+    pub fn is_non_positive(self) -> bool {
+        self.0 <= 0
     }
 }
 
@@ -121,6 +149,16 @@ impl Div<f64> for SpanNs {
 }
 
 impl TimeNs {
+    pub const EPOCH: Self = Self(0);
+
+    pub fn to_span_since_epoch(self) -> SpanNs {
+        SpanNs(self.0)
+    }
+
+    pub fn of_span_since_epoch(span: SpanNs) -> Self {
+        Self(span.0)
+    }
+
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
         let sec = self.0 / SpanNs::SEC.0;
         let ns = self.0 % SpanNs::SEC.0;
