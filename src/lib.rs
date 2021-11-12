@@ -132,6 +132,134 @@ impl std::fmt::Display for SpanNs {
     }
 }
 
+impl std::fmt::Debug for SpanNs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        std::fmt::Display::fmt(self, f)
+    }
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ParseSpanError {
+    EmptyString,
+    UnexpectedChar(String, char),
+    UnexpectedCharAfterU(String),
+    UnexpectedCharAfterN(String),
+}
+
+impl std::str::FromStr for SpanNs {
+    type Err = ParseSpanError;
+
+    // TODO: Maybe add a bit of validation to avoid 1d1d for example.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars().peekable();
+        let negative = match chars.peek() {
+            None => return Err(ParseSpanError::EmptyString),
+            Some('+') => {
+                chars.next();
+                false
+            }
+            Some('-') => {
+                chars.next();
+                true
+            }
+            Some(_) => false,
+        };
+        let mut res = SpanNs::ZERO;
+        let mut value = 0;
+        let mut frac_value = 0;
+        let mut frac_digits = 1;
+        let mut after_point = false;
+        while let Some(c) = chars.next() {
+            // d, h, m, s, ms, us, ns
+            let should_init = match c {
+                '.' => {
+                    after_point = true;
+                    false
+                }
+                'd' => {
+                    res = res + SpanNs::DAY * value;
+                    if frac_value != 0 {
+                        res = res + SpanNs((SpanNs::DAY.0 * frac_value) / frac_digits)
+                    }
+                    true
+                }
+                'h' => {
+                    res = res + SpanNs::HR * value;
+                    if frac_value != 0 {
+                        res = res + SpanNs((SpanNs::HR.0 * frac_value) / frac_digits)
+                    }
+                    true
+                }
+                'm' => {
+                    match chars.next_if_eq(&'s') {
+                        Some(_) => {
+                            res = res + SpanNs::MS * value;
+                            if frac_value != 0 {
+                                res = res + SpanNs((SpanNs::MS.0 * frac_value) / frac_digits)
+                            }
+                        }
+                        None => {
+                            res = res + SpanNs::MIN * value;
+                            if frac_value != 0 {
+                                res = res + SpanNs((SpanNs::MIN.0 * frac_value) / frac_digits)
+                            }
+                        }
+                    }
+                    true
+                }
+                's' => {
+                    res = res + SpanNs::SEC * value;
+                    if frac_value != 0 {
+                        res = res + SpanNs((SpanNs::SEC.0 * frac_value) / frac_digits)
+                    }
+                    true
+                }
+                'u' => match chars.next_if_eq(&'s') {
+                    Some(_) => {
+                        res = res + SpanNs::US * value;
+                        if frac_value != 0 {
+                            res = res + SpanNs((SpanNs::US.0 * frac_value) / frac_digits)
+                        }
+                        true
+                    }
+                    None => return Err(ParseSpanError::UnexpectedCharAfterU(s.to_string())),
+                },
+                'n' => match chars.next_if_eq(&'s') {
+                    Some(_) => {
+                        res = res + SpanNs::NS * value;
+                        if frac_value * 2 > frac_digits {
+                            res = res + SpanNs::NS;
+                        }
+                        true
+                    }
+                    None => return Err(ParseSpanError::UnexpectedCharAfterN(s.to_string())),
+                },
+                other => match other.to_digit(10) {
+                    Some(digit) => {
+                        if after_point {
+                            frac_value = 10 * frac_value + digit as i64;
+                            frac_digits *= 10;
+                        } else {
+                            value = 10 * value + digit as i64;
+                        }
+                        false
+                    }
+                    None => return Err(ParseSpanError::UnexpectedChar(s.to_string(), other)),
+                },
+            };
+            if should_init {
+                value = 0;
+                frac_value = 0;
+                frac_digits = 1;
+                after_point = false
+            }
+        }
+        if negative {
+            res = res.neg();
+        }
+        Ok(res)
+    }
+}
+
 impl Add for SpanNs {
     type Output = Self;
 

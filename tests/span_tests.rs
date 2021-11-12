@@ -1,7 +1,9 @@
 use timens::SpanNs;
 
 fn test_str(s: SpanNs, str: &str) {
-    assert_eq!(s.to_string(), str)
+    assert_eq!(s.to_string(), str);
+    let v: SpanNs = str.parse().unwrap();
+    assert_eq!(s, v);
 }
 
 #[test]
