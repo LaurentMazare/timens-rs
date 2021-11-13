@@ -2,7 +2,7 @@ extern crate chrono;
 extern crate chrono_tz;
 
 use chrono::{TimeZone, Timelike};
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TimeNs(i64);
@@ -32,7 +32,7 @@ impl SpanNs {
     pub const ZERO: Self = Self(0);
 
     span_conv!(to_ns, of_int_ns, of_ns, NS, 1);
-    span_conv!(to_us, of_int_us, of_us, US, 1000);
+    span_conv!(to_us, of_int_us, of_us, US, 1_000);
     span_conv!(to_ms, of_int_ms, of_ms, MS, 1_000_000);
     span_conv!(to_sec, of_int_sec, of_sec, SEC, 1_000_000_000);
     span_conv!(to_min, of_int_min, of_min, MIN, 60_000_000_000i64);
@@ -41,10 +41,6 @@ impl SpanNs {
 
     pub fn abs(self) -> Self {
         Self(self.0.abs())
-    }
-
-    pub fn neg(self) -> Self {
-        Self(-self.0)
     }
 
     pub fn is_positive(self) -> bool {
@@ -111,16 +107,16 @@ impl std::fmt::Display for SpanNs {
                 }
                 write!(f, "us")?;
             } else if ns < 1_000_000_000 {
-                write!(f, "{}", ns / 1000_000)?;
-                let rem_ns = ns % 1000_000;
+                write!(f, "{}", ns / 1_000_000)?;
+                let rem_ns = ns % 1_000_000;
                 if rem_ns != 0 {
                     let (rem_ns, width) = remove_trailing_zeros(rem_ns, 6);
                     write!(f, ".{:0width$}", rem_ns, width = width)?;
                 }
                 write!(f, "ms")?;
             } else {
-                write!(f, "{}", ns / 1000_000_000)?;
-                let rem_ns = ns % 1000_000_000;
+                write!(f, "{}", ns / 1_000_000_000)?;
+                let rem_ns = ns % 1_000_000_000;
                 if rem_ns != 0 {
                     let (rem_ns, width) = remove_trailing_zeros(rem_ns, 9);
                     write!(f, ".{:0width$}", rem_ns, width = width)?;
@@ -273,6 +269,14 @@ impl Add<SpanNs> for TimeNs {
 
     fn add(self, other: SpanNs) -> Self {
         Self(self.0 + other.0)
+    }
+}
+
+impl Neg for SpanNs {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Self(-self.0)
     }
 }
 

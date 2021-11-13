@@ -29,7 +29,8 @@ fn to_string() {
     test_str(SpanNs::NS, "1ns");
     test_str(SpanNs::of_day(12.), "12d");
     test_str(SpanNs::DAY * 12 + SpanNs::NS, "12d1ns");
-    test_str((SpanNs::DAY * 12 + SpanNs::NS).neg(), "-12d1ns");
+    test_str(-SpanNs::DAY * 12 - SpanNs::NS, "-12d1ns");
+    test_str(-SpanNs::DAY * 12 + SpanNs::NS, "-11d23h59m59.999999999s");
     test_str(SpanNs::DAY * 12 + SpanNs::MS + SpanNs::NS, "12d1.000001ms");
     test_str(SpanNs::DAY + SpanNs::MS + SpanNs::US, "1d1.001ms");
     test_str(
@@ -41,4 +42,15 @@ fn to_string() {
     test_str(SpanNs::MIN * 12 + SpanNs::US * 123456, "12m123.456ms");
     test_str(SpanNs::MIN * 12 + SpanNs::NS * 123000, "12m123us");
     test_str(SpanNs::MIN * 12 + SpanNs::NS * 123001, "12m123.001us");
+
+    assert_eq!(
+        "1.1d".parse::<SpanNs>().unwrap(),
+        SpanNs::DAY + SpanNs::MIN * 144
+    );
+
+    // Some weird formatting
+    assert_eq!(
+        "1.d0s.0s.1d".parse::<SpanNs>().unwrap(),
+        SpanNs::DAY + SpanNs::MIN * 144
+    );
 }
