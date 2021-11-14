@@ -1,13 +1,21 @@
 extern crate chrono;
 extern crate chrono_tz;
 
+#[cfg(feature = "binprot")]
+use {
+    binprot::BinProtRead,
+    binprot_derive::{BinProtRead, BinProtWrite},
+};
+
 use chrono::{TimeZone, Timelike};
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct TimeNs(i64);
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct SpanNs(i64);
 
 macro_rules! span_conv {
