@@ -51,6 +51,53 @@ impl Month {
             }
         }
     }
+
+    pub fn to_u8(self) -> u8 {
+        match self {
+            Self::Jan => 1,
+            Self::Feb => 2,
+            Self::Mar => 3,
+            Self::Apr => 4,
+            Self::May => 5,
+            Self::Jun => 6,
+            Self::Jul => 7,
+            Self::Aug => 8,
+            Self::Sep => 9,
+            Self::Oct => 10,
+            Self::Nov => 11,
+            Self::Dec => 12,
+        }
+    }
+
+    pub fn of_u8(m: u8) -> Option<Self> {
+        match m {
+            1 => Some(Self::Jan),
+            2 => Some(Self::Feb),
+            3 => Some(Self::Mar),
+            4 => Some(Self::Apr),
+            5 => Some(Self::May),
+            6 => Some(Self::Jun),
+            7 => Some(Self::Jul),
+            8 => Some(Self::Aug),
+            9 => Some(Self::Sep),
+            10 => Some(Self::Oct),
+            11 => Some(Self::Nov),
+            12 => Some(Self::Dec),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:04}-{:02}-{:02}",
+            self.year(),
+            self.month_int(),
+            self.day()
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -72,22 +119,12 @@ impl Date {
         self.0 >> 16
     }
 
+    pub fn month_int(self) -> u8 {
+        ((self.0 >> 8) & 255) as u8
+    }
+
     pub fn month(self) -> Month {
-        match (self.0 >> 8) & 255 {
-            0 => Month::Jan,
-            1 => Month::Feb,
-            2 => Month::Mar,
-            3 => Month::Apr,
-            4 => Month::May,
-            5 => Month::Jun,
-            6 => Month::Jul,
-            7 => Month::Aug,
-            8 => Month::Sep,
-            9 => Month::Oct,
-            10 => Month::Nov,
-            11 => Month::Dec,
-            month => panic!("unexpected month {}", month),
-        }
+        Month::of_u8(self.month_int()).expect("not a proper month")
     }
 
     pub fn day(self) -> u8 {
@@ -116,6 +153,23 @@ impl Date {
             Month::Dec => 11,
         };
         Ok(Date((year << 16) | (month_as_int << 8) | day as u32))
+    }
+
+    pub fn to_string_iso8601_extended(self) -> String {
+        self.to_string()
+    }
+
+    pub fn to_string_iso8601_basic(self) -> String {
+        format!("{:04}{:02}{:02}", self.year(), self.month_int(), self.day())
+    }
+
+    pub fn to_string_american(self) -> String {
+        format!(
+            "{:02}/{:02}/{:04}",
+            self.month_int(),
+            self.day(),
+            self.year()
+        )
     }
 }
 
