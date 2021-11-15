@@ -10,6 +10,115 @@ use {
 use chrono::{TimeZone, Timelike};
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
+// Same representation as OCaml Core.Date.t, i.e.
+// 2 bytes year, 1 byte month, 1 byte day
+// https://github.com/janestreet/core_kernel/blob/4244b42cac7d1ba834c93bdeda2e29bc7ecfa9aa/core/src/date0.ml
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
+pub struct Date(u32);
+
+pub fn is_leap_year(year: u32) -> bool {
+    year % 4 == 0 && year % 100 != 0 || year % 400 == 0
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Month {
+    Jan,
+    Feb,
+    Mar,
+    Apr,
+    May,
+    Jun,
+    Jul,
+    Aug,
+    Sep,
+    Oct,
+    Nov,
+    Dec,
+}
+
+impl Month {
+    pub fn days_in_month(self, year: u32) -> u8 {
+        match self {
+            Self::Jan | Self::Mar | Self::May | Self::Jul | Self::Aug | Self::Oct | Self::Dec => 31,
+            Self::Apr | Self::Jun | Self::Sep | Self::Nov => 30,
+            Self::Feb => {
+                if is_leap_year(year) {
+                    29
+                } else {
+                    28
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum DateError {
+    InvalidYear(u32),
+    InvalidDayForMonth(u32, Month, u8),
+}
+
+impl std::fmt::Display for DateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for DateError {}
+
+impl Date {
+    pub fn year(self) -> u32 {
+        self.0 >> 16
+    }
+
+    pub fn month(self) -> Month {
+        match (self.0 >> 8) & 255 {
+            0 => Month::Jan,
+            1 => Month::Feb,
+            2 => Month::Mar,
+            3 => Month::Apr,
+            4 => Month::May,
+            5 => Month::Jun,
+            6 => Month::Jul,
+            7 => Month::Aug,
+            8 => Month::Sep,
+            9 => Month::Oct,
+            10 => Month::Nov,
+            11 => Month::Dec,
+            month => panic!("unexpected month {}", month),
+        }
+    }
+
+    pub fn day(self) -> u8 {
+        (self.0 & 255) as u8
+    }
+
+    pub fn create(year: u32, month: Month, day: u8) -> Result<Self, DateError> {
+        if year > 9999 {
+            return Err(DateError::InvalidYear(year));
+        }
+        if day == 0 || day > month.days_in_month(year) {
+            return Err(DateError::InvalidDayForMonth(year, month, day));
+        }
+        let month_as_int = match month {
+            Month::Jan => 0,
+            Month::Feb => 1,
+            Month::Mar => 2,
+            Month::Apr => 3,
+            Month::May => 4,
+            Month::Jun => 5,
+            Month::Jul => 6,
+            Month::Aug => 7,
+            Month::Sep => 8,
+            Month::Oct => 9,
+            Month::Nov => 10,
+            Month::Dec => 11,
+        };
+        Ok(Date((year << 16) | (month_as_int << 8) | day as u32))
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct TimeNs(i64);
