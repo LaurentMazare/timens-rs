@@ -17,7 +17,7 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct Date(u32);
 
-pub fn is_leap_year(year: u32) -> bool {
+pub const fn is_leap_year(year: u32) -> bool {
     year % 4 == 0 && year % 100 != 0 || year % 400 == 0
 }
 
@@ -38,7 +38,7 @@ pub enum Month {
 }
 
 impl Month {
-    pub fn days_in_month(self, year: u32) -> u8 {
+    pub const fn days_in_month(self, year: u32) -> u8 {
         match self {
             Self::Jan | Self::Mar | Self::May | Self::Jul | Self::Aug | Self::Oct | Self::Dec => 31,
             Self::Apr | Self::Jun | Self::Sep | Self::Nov => 30,
@@ -134,7 +134,7 @@ impl Date {
         (self.0 & 255) as u8
     }
 
-    pub fn create(year: u32, month: Month, day: u8) -> Result<Self, DateError> {
+    pub const fn create(year: u32, month: Month, day: u8) -> Result<Self, DateError> {
         if year > 9999 {
             return Err(DateError::InvalidYear(year));
         }
@@ -174,6 +174,14 @@ impl Date {
             self.year()
         )
     }
+
+    pub const UNIX_EPOCH: Self = match Self::create(1970, Month::Jan, 1) {
+        Ok(date) => date,
+        Err(_) => {
+            /* Panic here when const panics are stable. */
+            Date(0)
+        }
+    };
 }
 
 pub struct Days(i32);
