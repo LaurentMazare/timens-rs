@@ -139,18 +139,18 @@ impl Date {
             return Err(DateError::InvalidDayForMonth(year, month, day));
         }
         let month_as_int = match month {
-            Month::Jan => 0,
-            Month::Feb => 1,
-            Month::Mar => 2,
-            Month::Apr => 3,
-            Month::May => 4,
-            Month::Jun => 5,
-            Month::Jul => 6,
-            Month::Aug => 7,
-            Month::Sep => 8,
-            Month::Oct => 9,
-            Month::Nov => 10,
-            Month::Dec => 11,
+            Month::Jan => 1,
+            Month::Feb => 2,
+            Month::Mar => 3,
+            Month::Apr => 4,
+            Month::May => 5,
+            Month::Jun => 6,
+            Month::Jul => 7,
+            Month::Aug => 8,
+            Month::Sep => 9,
+            Month::Oct => 10,
+            Month::Nov => 11,
+            Month::Dec => 12,
         };
         Ok(Date((year << 16) | (month_as_int << 8) | day as u32))
     }
@@ -211,11 +211,45 @@ impl Add<i32> for Days {
     }
 }
 
+impl Sub<i32> for Days {
+    type Output = Days;
+
+    fn sub(self, other: i32) -> Self::Output {
+        Self(self.0 - other)
+    }
+}
+
 impl Sub for Days {
     type Output = i32;
 
     fn sub(self, other: Self) -> Self::Output {
         self.0 - other.0
+    }
+}
+
+impl Add<i32> for Date {
+    type Output = Date;
+
+    fn add(self, other: i32) -> Self::Output {
+        let days = Days::of_date(self);
+        (days + other).to_date().unwrap()
+    }
+}
+
+impl Sub<i32> for Date {
+    type Output = Date;
+
+    fn sub(self, other: i32) -> Self::Output {
+        let days = Days::of_date(self);
+        (days - other).to_date().unwrap()
+    }
+}
+
+impl Sub for Date {
+    type Output = i32;
+
+    fn sub(self, other: Self) -> Self::Output {
+        Days::of_date(self) - Days::of_date(other)
     }
 }
 
