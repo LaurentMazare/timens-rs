@@ -173,6 +173,52 @@ impl Date {
     }
 }
 
+pub struct Days(i32);
+
+impl Days {
+    fn of_year(y: i32) -> Self {
+        Days(365 * y + y / 4 + y / 400 - y / 100)
+    }
+
+    pub fn of_date(date: Date) -> Days {
+        let m = (date.month_int() as i32 + 9) % 12;
+        let y = date.year() as i32 - m / 10;
+        Days(Self::of_year(y).0 + (((m * 306) + 5) / 10) + date.day() as i32 - 1)
+    }
+
+    pub fn to_date(self) -> Result<Date, DateError> {
+        let y = ((self.0 as i64 * 10_000 + 14_780) / 3_652_425) as i32;
+        let ddd = self.0 - Self::of_year(y).0 as i32;
+        let (y, ddd) = if ddd < 0 {
+            let y = y - 1;
+            (y, self.0 - Self::of_year(y).0)
+        } else {
+            (y, ddd)
+        };
+        let mi = ((100 * ddd) + 52) / 3_060;
+        let y = y + ((mi + 2) / 12);
+        let m = ((mi + 2) % 12) + 1;
+        let d = ddd - (((mi * 306) + 5) / 10) + 1;
+        Date::create(y as u32, Month::of_u8(m as u8).unwrap(), d as u8)
+    }
+}
+
+impl Add<i32> for Days {
+    type Output = Days;
+
+    fn add(self, other: i32) -> Self::Output {
+        Self(self.0 + other)
+    }
+}
+
+impl Sub for Days {
+    type Output = i32;
+
+    fn sub(self, other: Self) -> Self::Output {
+        self.0 - other.0
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct TimeNs(i64);
