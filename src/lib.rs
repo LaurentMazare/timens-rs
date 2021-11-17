@@ -104,6 +104,9 @@ impl std::fmt::Display for Date {
 pub enum DateError {
     InvalidYear(u32),
     InvalidDayForMonth(u32, Month, u8),
+    ParseIntError,
+    ParseMonthError,
+    ParseError,
 }
 
 impl std::fmt::Display for DateError {
@@ -200,6 +203,31 @@ impl Days {
         let m = ((mi + 2) % 12) + 1;
         let d = ddd - (((mi * 306) + 5) / 10) + 1;
         Date::create(y as u32, Month::of_u8(m as u8).unwrap(), d as u8)
+    }
+}
+
+impl std::convert::From<std::num::ParseIntError> for DateError {
+    fn from(_: std::num::ParseIntError) -> Self {
+        DateError::ParseIntError
+    }
+}
+
+impl std::str::FromStr for Date {
+    type Err = DateError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('-').collect();
+        match parts[..] {
+            [y, m, d] => {
+                let y = u32::from_str(y)?;
+                let d = u8::from_str(d)?;
+                match Month::of_u8(u8::from_str(m)?) {
+                    Some(m) => Date::create(y, m, d),
+                    None => Err(DateError::ParseMonthError),
+                }
+            }
+            _ => Err(DateError::ParseError),
+        }
     }
 }
 
