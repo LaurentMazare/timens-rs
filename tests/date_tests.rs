@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use timens::{Date, Month};
+use timens::{Date, DayOfWeek, Month};
 
 #[test]
 fn add_sub() {
@@ -21,6 +21,7 @@ fn add_sub() {
 fn add_months() {
     let d = Date::from_str("2020-01-16").unwrap();
     assert_eq!(d.to_string(), "2020-01-16");
+    assert_eq!(d.day_of_week(), DayOfWeek::Thu);
     assert_eq!(d.add_months(0).to_string(), "2020-01-16");
     assert_eq!(d.add_months(1).to_string(), "2020-02-16");
     assert_eq!(d.add_months(2).to_string(), "2020-03-16");
@@ -30,6 +31,7 @@ fn add_months() {
     assert_eq!(d.add_months(-20).to_string(), "2018-05-16");
     let d = Date::from_str("2020-01-31").unwrap();
     assert_eq!(d.to_string(), "2020-01-31");
+    assert_eq!(d.day_of_week(), DayOfWeek::Fri);
     assert_eq!(d.add_months(0).to_string(), "2020-01-31");
     assert_eq!(d.add_months(1).to_string(), "2020-02-29");
     assert_eq!(d.add_months(13).to_string(), "2021-02-28");

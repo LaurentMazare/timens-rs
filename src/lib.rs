@@ -22,6 +22,44 @@ pub const fn is_leap_year(year: u32) -> bool {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DayOfWeek {
+    Sun,
+    Mon,
+    Tue,
+    Wed,
+    Thu,
+    Fri,
+    Sat,
+}
+
+impl DayOfWeek {
+    pub fn of_u8(i: u8) -> Option<DayOfWeek> {
+        match i {
+            0 => Some(Self::Sun),
+            1 => Some(Self::Mon),
+            2 => Some(Self::Tue),
+            3 => Some(Self::Wed),
+            4 => Some(Self::Thu),
+            5 => Some(Self::Fri),
+            6 => Some(Self::Sat),
+            _ => None,
+        }
+    }
+
+    pub fn to_u8(self) -> u8 {
+        match self {
+            Self::Sun => 0,
+            Self::Mon => 1,
+            Self::Tue => 2,
+            Self::Wed => 3,
+            Self::Thu => 4,
+            Self::Fri => 5,
+            Self::Sat => 6,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Month {
     Jan,
     Feb,
@@ -217,6 +255,20 @@ impl Date {
 
     pub fn add_years(self, y: i32) -> Self {
         self.add_months(y * 12)
+    }
+
+    const DAYOFWEEK_TABLE: [i32; 12] = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+
+    pub fn day_of_week(self) -> DayOfWeek {
+        let m = self.month_int();
+        let y = if m < 3 { self.year() - 1 } else { self.year() };
+        let y = y as i32;
+        let d = (y + y / 4 - y / 100
+            + y / 400
+            + Self::DAYOFWEEK_TABLE[(m - 1) as usize]
+            + self.day() as i32)
+            % 7;
+        DayOfWeek::of_u8(d as u8).unwrap()
     }
 }
 
