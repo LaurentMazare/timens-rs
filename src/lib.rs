@@ -200,12 +200,10 @@ impl Date {
         };
         let y = (self.year() as i32 + diff_y) as u32;
         let m = total_months % 12;
-        let (y, m) = if m == 0 {
-            (y - 1, 12)
-        } else if m < 0 {
-            (y, m + 12)
-        } else {
-            (y, m)
+        let (y, m) = match m.cmp(&0) {
+            std::cmp::Ordering::Equal => (y - 1, 12),
+            std::cmp::Ordering::Less => (y, m + 12),
+            std::cmp::Ordering::Greater => (y, m),
         };
         let m = Month::of_u8(m as u8).unwrap();
         let mut d = self.day();
