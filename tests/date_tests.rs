@@ -16,3 +16,26 @@ fn add_sub() {
         assert_eq!(d + i - i, d);
     }
 }
+
+#[test]
+fn add_months() {
+    let d = Date::from_str("2020-01-16").unwrap();
+    assert_eq!(d.to_string(), "2020-01-16");
+    assert_eq!(d.add_months(0).to_string(), "2020-01-16");
+    assert_eq!(d.add_months(1).to_string(), "2020-02-16");
+    assert_eq!(d.add_months(2).to_string(), "2020-03-16");
+    assert_eq!(d.add_months(20).to_string(), "2021-09-16");
+    assert_eq!(d.add_months(-1).to_string(), "2019-12-16");
+    assert_eq!(d.add_months(-2).to_string(), "2019-11-16");
+    assert_eq!(d.add_months(-20).to_string(), "2018-05-16");
+    let d = Date::from_str("2020-01-31").unwrap();
+    assert_eq!(d.to_string(), "2020-01-31");
+    assert_eq!(d.add_months(0).to_string(), "2020-01-31");
+    assert_eq!(d.add_months(1).to_string(), "2020-02-29");
+    assert_eq!(d.add_months(13).to_string(), "2021-02-28");
+    assert_eq!(d.add_months(2).to_string(), "2020-03-31");
+    assert_eq!(d.add_months(20).to_string(), "2021-09-30");
+    assert_eq!(d.add_months(-1).to_string(), "2019-12-31");
+    assert_eq!(d.add_months(-2).to_string(), "2019-11-30");
+    assert_eq!(d.add_months(-20).to_string(), "2018-05-31");
+}

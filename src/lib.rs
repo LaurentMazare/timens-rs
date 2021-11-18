@@ -182,6 +182,44 @@ impl Date {
             Date(0)
         }
     };
+
+    pub fn add_days(self, n: i32) -> Self {
+        self + n
+    }
+
+    /// Add some number of months to a date.
+    /// This returns the date with the last day of the month in the case where the
+    /// actual date would be invalid, e.g. adding a month to Jan 31 results in Feb 28
+    /// or Feb 29 depending on whether it's a leap year or not.
+    pub fn add_months(self, m: i32) -> Self {
+        let total_months = self.month_int() as i32 + m;
+        let diff_y = if total_months < 0 {
+            (total_months + 1) / 12 - 1
+        } else {
+            total_months / 12
+        };
+        let y = (self.year() as i32 + diff_y) as u32;
+        let m = total_months % 12;
+        let (y, m) = if m == 0 {
+            (y - 1, 12)
+        } else if m < 0 {
+            (y, m + 12)
+        } else {
+            (y, m)
+        };
+        let m = Month::of_u8(m as u8).unwrap();
+        let mut d = self.day();
+        loop {
+            if let Ok(date) = Self::create(y, m, d) {
+                return date;
+            }
+            d -= 1;
+        }
+    }
+
+    pub fn add_years(self, y: i32) -> Self {
+        self.add_months(y * 12)
+    }
 }
 
 pub struct Days(i32);
