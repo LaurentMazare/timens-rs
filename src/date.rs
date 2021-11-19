@@ -1,11 +1,49 @@
+#[cfg(feature = "binio")]
+use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
 // Same representation as OCaml Core.Date.t, i.e.
 // 2 bytes year, 1 byte month, 1 byte day
 // https://github.com/janestreet/core_kernel/blob/4244b42cac7d1ba834c93bdeda2e29bc7ecfa9aa/core/src/date0.ml
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct Date(u32);
+
+#[cfg(feature = "binio")]
+impl binprot::BinProtRead for Date {
+    fn binprot_read<R>(r: &mut R) -> Result<Self, binprot::Error>
+    where
+        R: std::io::Read + ?Sized,
+    {
+        let year: i64 = binprot::BinProtRead::binprot_read(r)?;
+        let year = match u32::try_from(year) {
+            Ok(year) => year,
+            Err(_) => return Err(std::io::Error::from(std::io::ErrorKind::InvalidInput).into()),
+        };
+        let month: Month = binprot::BinProtRead::binprot_read(r)?;
+        let day: i64 = binprot::BinProtRead::binprot_read(r)?;
+        let day = match u8::try_from(day) {
+            Ok(day) => day,
+            Err(_) => return Err(std::io::Error::from(std::io::ErrorKind::InvalidInput).into()),
+        };
+        match Self::create(year, month, day) {
+            Ok(date) => Ok(date),
+            Err(_) => Err(std::io::Error::from(std::io::ErrorKind::InvalidInput).into()),
+        }
+    }
+}
+
+#[cfg(feature = "binio")]
+impl binprot::BinProtWrite for Date {
+    fn binprot_write<W>(&self, w: &mut W) -> Result<(), std::io::Error>
+    where
+        W: std::io::Write,
+    {
+        binprot::BinProtWrite::binprot_write(&(self.year() as i64), w)?;
+        binprot::BinProtWrite::binprot_write(&self.month(), w)?;
+        binprot::BinProtWrite::binprot_write(&(self.day() as i64), w)?;
+        Ok(())
+    }
+}
 
 pub const fn is_leap_year(year: u32) -> bool {
     year % 4 == 0 && year % 100 != 0 || year % 400 == 0
@@ -50,6 +88,10 @@ impl DayOfWeek {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(
+    feature = "binio",
+    derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite)
+)]
 pub enum Month {
     Jan,
     Feb,
