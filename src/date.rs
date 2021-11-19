@@ -15,19 +15,13 @@ impl binprot::BinProtRead for Date {
         R: std::io::Read + ?Sized,
     {
         let year: i64 = binprot::BinProtRead::binprot_read(r)?;
-        let year = match u32::try_from(year) {
-            Ok(year) => year,
-            Err(_) => return Err(std::io::Error::from(std::io::ErrorKind::InvalidInput).into()),
-        };
+        let year = u32::try_from(year)?;
         let month: Month = binprot::BinProtRead::binprot_read(r)?;
         let day: i64 = binprot::BinProtRead::binprot_read(r)?;
-        let day = match u8::try_from(day) {
-            Ok(day) => day,
-            Err(_) => return Err(std::io::Error::from(std::io::ErrorKind::InvalidInput).into()),
-        };
+        let day = u8::try_from(day)?;
         match Self::create(year, month, day) {
             Ok(date) => Ok(date),
-            Err(_) => Err(std::io::Error::from(std::io::ErrorKind::InvalidInput).into()),
+            Err(err) => Err(binprot::Error::CustomError(Box::new(err))),
         }
     }
 }

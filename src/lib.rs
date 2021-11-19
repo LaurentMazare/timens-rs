@@ -9,10 +9,7 @@ extern crate binprot;
 #[cfg(feature = "binio")]
 extern crate binprot_derive;
 #[cfg(feature = "binio")]
-use {
-    binprot::BinProtRead,
-    binprot_derive::{BinProtRead, BinProtWrite},
-};
+use binprot_derive::{BinProtRead, BinProtWrite};
 
 use chrono::{TimeZone, Timelike};
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
