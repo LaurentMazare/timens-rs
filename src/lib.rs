@@ -2,10 +2,10 @@ extern crate chrono;
 extern crate chrono_tz;
 
 mod date;
-pub use date::{Date, DayOfWeek, Month};
+pub use date::{Date, DateError, DayOfWeek, Month};
 
 mod timezone;
-pub use timezone::{FixedTimespan, FixedTimespanSet};
+pub use timezone::{TzInfo, TzOffset};
 
 #[cfg(feature = "binio")]
 extern crate binprot;
@@ -384,6 +384,16 @@ impl TimeNs {
 
     pub fn of_span_since_epoch(span: SpanNs) -> Self {
         Self(span.0)
+    }
+
+    // TODO: Add OfDay and use it rather than SpanNs
+    pub fn to_date_ofday(self, tz_info: &TzInfo) -> (Date, SpanNs) {
+        let offset = tz_info.offset(self);
+        let ns_since_epoch = self.0 + offset.0;
+        let days = ns_since_epoch.div_euclid(SpanNs::DAY.0);
+        let ofday = ns_since_epoch.rem_euclid(SpanNs::DAY.0);
+        let date = Date::of_days_since_epoch(days as i32);
+        (date, SpanNs(ofday))
     }
 
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {

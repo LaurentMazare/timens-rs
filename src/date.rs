@@ -327,6 +327,10 @@ impl Date {
             % 7;
         DayOfWeek::of_u8(d as u8).unwrap()
     }
+
+    pub fn of_days_since_epoch(d: i32) -> Self {
+        Self::UNIX_EPOCH + d
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
