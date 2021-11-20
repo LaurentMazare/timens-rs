@@ -4,6 +4,9 @@ extern crate chrono_tz;
 mod date;
 pub use date::{Date, DayOfWeek, Month};
 
+mod timezone;
+pub use timezone::{FixedTimespan, FixedTimespanSet};
+
 #[cfg(feature = "binio")]
 extern crate binprot;
 #[cfg(feature = "binio")]
@@ -384,8 +387,8 @@ impl TimeNs {
     }
 
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
-        let sec = self.0 / SpanNs::SEC.0;
-        let ns = self.0 % SpanNs::SEC.0;
+        let sec = self.0.div_euclid(SpanNs::SEC.0);
+        let ns = self.0.rem_euclid(SpanNs::SEC.0);
         chrono::NaiveDateTime::from_timestamp(sec, ns as u32)
     }
 
