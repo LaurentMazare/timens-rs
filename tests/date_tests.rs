@@ -51,3 +51,12 @@ fn binio_roundtrip() {
     let rt: Date = binprot::BinProtRead::binprot_read(&mut bytes.as_slice()).unwrap();
     assert_eq!(d, rt)
 }
+
+#[cfg(feature = "sexp")]
+#[test]
+fn sexp_roundtrip() {
+    let d = Date::from_str("1991-01-16").unwrap();
+    let sexp = rsexp::SexpOf::sexp_of(&d);
+    let rt: Date = rsexp::OfSexp::of_sexp(&sexp).unwrap();
+    assert_eq!(d, rt)
+}
