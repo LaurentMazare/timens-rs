@@ -41,3 +41,13 @@ fn add_months() {
     assert_eq!(d.add_months(-2).to_string(), "2019-11-30");
     assert_eq!(d.add_months(-20).to_string(), "2018-05-31");
 }
+
+#[cfg(feature = "binio")]
+#[test]
+fn binio_roundtrip() {
+    let d = Date::from_str("2021-01-16").unwrap();
+    let mut bytes: Vec<u8> = vec![];
+    binprot::BinProtWrite::binprot_write(&d, &mut bytes).unwrap();
+    let rt: Date = binprot::BinProtRead::binprot_read(&mut bytes.as_slice()).unwrap();
+    assert_eq!(d, rt)
+}
