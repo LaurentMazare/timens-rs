@@ -1,5 +1,3 @@
-#[cfg(feature = "binio")]
-use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
 // Same representation as OCaml Core.Date.t, i.e.
@@ -9,33 +7,35 @@ use std::ops::{Add, Sub};
 pub struct Date(u32);
 
 #[cfg(feature = "binio")]
-impl binprot::BinProtRead for Date {
-    fn binprot_read<R>(r: &mut R) -> Result<Self, binprot::Error>
-    where
-        R: std::io::Read + ?Sized,
-    {
-        let year: i64 = binprot::BinProtRead::binprot_read(r)?;
-        let year = u32::try_from(year)?;
-        let month: Month = binprot::BinProtRead::binprot_read(r)?;
-        let day: i64 = binprot::BinProtRead::binprot_read(r)?;
-        let day = u8::try_from(day)?;
-        match Self::create(year, month, day) {
-            Ok(date) => Ok(date),
-            Err(err) => Err(binprot::Error::CustomError(Box::new(err))),
+mod binio {
+    use std::convert::TryFrom;
+    impl binprot::BinProtRead for crate::Date {
+        fn binprot_read<R>(r: &mut R) -> Result<Self, binprot::Error>
+        where
+            R: std::io::Read + ?Sized,
+        {
+            let year: i64 = binprot::BinProtRead::binprot_read(r)?;
+            let year = u32::try_from(year)?;
+            let month: crate::Month = binprot::BinProtRead::binprot_read(r)?;
+            let day: i64 = binprot::BinProtRead::binprot_read(r)?;
+            let day = u8::try_from(day)?;
+            match Self::create(year, month, day) {
+                Ok(date) => Ok(date),
+                Err(err) => Err(binprot::Error::CustomError(Box::new(err))),
+            }
         }
     }
-}
 
-#[cfg(feature = "binio")]
-impl binprot::BinProtWrite for Date {
-    fn binprot_write<W>(&self, w: &mut W) -> Result<(), std::io::Error>
-    where
-        W: std::io::Write,
-    {
-        binprot::BinProtWrite::binprot_write(&(self.year() as i64), w)?;
-        binprot::BinProtWrite::binprot_write(&self.month(), w)?;
-        binprot::BinProtWrite::binprot_write(&(self.day() as i64), w)?;
-        Ok(())
+    impl binprot::BinProtWrite for crate::Date {
+        fn binprot_write<W>(&self, w: &mut W) -> Result<(), std::io::Error>
+        where
+            W: std::io::Write,
+        {
+            binprot::BinProtWrite::binprot_write(&(self.year() as i64), w)?;
+            binprot::BinProtWrite::binprot_write(&self.month(), w)?;
+            binprot::BinProtWrite::binprot_write(&(self.day() as i64), w)?;
+            Ok(())
+        }
     }
 }
 
