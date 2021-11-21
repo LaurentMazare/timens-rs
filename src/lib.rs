@@ -10,6 +10,9 @@ pub use timezone::{TzInfo, TzOffset};
 mod span;
 pub use span::SpanNs;
 
+mod ofday;
+pub use ofday::OfDay;
+
 #[cfg(feature = "binio")]
 extern crate binprot;
 #[cfg(feature = "binio")]
