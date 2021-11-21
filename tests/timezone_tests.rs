@@ -1,4 +1,5 @@
-use timens::{SpanNs, TimeNs, TzInfo, TzOffset};
+use std::str::FromStr;
+use timens::{Date, OfDay, SpanNs, TimeNs, TzError, TzInfo, TzOffset};
 
 const GMT: TzOffset = TzOffset {
     utc_offset: 0,
@@ -37,30 +38,92 @@ const EUROPE_LONDON: TzInfo = TzInfo {
     rest: &REST,
 };
 
+fn to_date_ofday_rt(timens: TimeNs, tz_info: &TzInfo) -> (Date, OfDay) {
+    let (date, ofday) = timens.to_date_ofday(tz_info);
+    let rt_timens = TimeNs::of_date_ofday(date, ofday, tz_info).unwrap();
+    assert_eq!(timens, rt_timens);
+    (date, ofday)
+}
+
 #[test]
 fn tz() {
     let timens = TimeNs::of_span_since_epoch(SpanNs::of_int_sec(1637437386));
     assert_eq!(EUROPE_LONDON.offset(timens), SpanNs::ZERO);
-    let (date, ofday) = timens.to_date_ofday(&EUROPE_LONDON);
+    let (date, ofday) = to_date_ofday_rt(timens, &EUROPE_LONDON);
     assert_eq!(date.to_string(), "2021-11-20");
     assert_eq!(ofday.to_string(), "19:43:06");
-    let (date, ofday) = timens.to_date_ofday(&TzInfo::GMT);
+    let (date, ofday) = to_date_ofday_rt(timens, &TzInfo::GMT);
     assert_eq!(date.to_string(), "2021-11-20");
     assert_eq!(ofday.to_string(), "19:43:06");
     let timens = TimeNs::of_span_since_epoch(SpanNs::of_int_sec(1630037386));
     assert_eq!(EUROPE_LONDON.offset(timens), SpanNs::of_int_hr(1));
-    let (date, ofday) = timens.to_date_ofday(&EUROPE_LONDON);
+    let (date, ofday) = to_date_ofday_rt(timens, &EUROPE_LONDON);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "05:09:46");
-    let (date, ofday) = timens.to_date_ofday(&TzInfo::GMT);
+    let (date, ofday) = to_date_ofday_rt(timens, &TzInfo::GMT);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "04:09:46");
     let timens = TimeNs::of_span_since_epoch(SpanNs::of_int_sec(1630037386 - 5 * 3600));
     assert_eq!(EUROPE_LONDON.offset(timens), SpanNs::of_int_hr(1));
-    let (date, ofday) = timens.to_date_ofday(&EUROPE_LONDON);
+    let (date, ofday) = to_date_ofday_rt(timens, &EUROPE_LONDON);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "00:09:46");
-    let (date, ofday) = timens.to_date_ofday(&TzInfo::GMT);
+    let (date, ofday) = to_date_ofday_rt(timens, &TzInfo::GMT);
     assert_eq!(date.to_string(), "2021-08-26");
     assert_eq!(ofday.to_string(), "23:09:46");
+}
+
+fn of_date_ofday_ldn(date: &str, ofday: &str) -> Result<TimeNs, TzError> {
+    let date = Date::from_str(date).unwrap();
+    let ofday = OfDay::from_str(ofday).unwrap();
+    TimeNs::of_date_ofday(date, ofday, &EUROPE_LONDON)
+}
+
+#[test]
+fn tz_daylightsaving() {
+    let timens = of_date_ofday_ldn("2021-11-21", "20:51:45").unwrap();
+    assert_eq!(timens.to_string_gmt(), "2021-11-21 20:51:45Z");
+    // Day-light saving boundary, the same hour happened twice on 2021-10-31.
+    let timens = of_date_ofday_ldn("2021-10-31", "00:59:59").unwrap();
+    assert_eq!(timens.to_string_gmt(), "2021-10-30 23:59:59Z");
+    match of_date_ofday_ldn("2021-10-31", "01:00:00") {
+        Err(TzError::TwoTimesInThisTz(t1, t2)) => {
+            assert_eq!(t1.to_string_gmt(), "2021-10-31 00:00:00Z");
+            assert_eq!(t2.to_string_gmt(), "2021-10-31 01:00:00Z");
+        }
+        otherwise => panic!("unexpected {:?}", otherwise),
+    }
+    match of_date_ofday_ldn("2021-10-31", "01:30:00") {
+        Err(TzError::TwoTimesInThisTz(t1, t2)) => {
+            assert_eq!(t1.to_string_gmt(), "2021-10-31 00:30:00Z");
+            assert_eq!(t2.to_string_gmt(), "2021-10-31 01:30:00Z");
+        }
+        otherwise => panic!("unexpected {:?}", otherwise),
+    }
+    match of_date_ofday_ldn("2021-10-31", "01:59:59.999999999") {
+        Err(TzError::TwoTimesInThisTz(t1, t2)) => {
+            assert_eq!(t1.to_string_gmt(), "2021-10-31 00:59:59.999999999Z");
+            assert_eq!(t2.to_string_gmt(), "2021-10-31 01:59:59.999999999Z");
+        }
+        otherwise => panic!("unexpected {:?}", otherwise),
+    }
+    let timens = of_date_ofday_ldn("2021-10-31", "02:00:00").unwrap();
+    assert_eq!(timens.to_string_gmt(), "2021-10-31 02:00:00Z");
+    // Day-light saving boundary, an hour disappeared on 2021-03-28.
+    let timens = of_date_ofday_ldn("2021-03-28", "00:59:59.9").unwrap();
+    assert_eq!(timens.to_string_gmt(), "2021-03-28 00:59:59.9Z");
+    let timens = of_date_ofday_ldn("2021-03-28", "02:00:00").unwrap();
+    assert_eq!(timens.to_string_gmt(), "2021-03-28 01:00:00Z");
+    match of_date_ofday_ldn("2021-03-28", "01:59:59.999999999") {
+        Err(TzError::NoTimeInThisTz) => (),
+        otherwise => panic!("unexpected {:?}", otherwise),
+    }
+    match of_date_ofday_ldn("2021-03-28", "01:00:00") {
+        Err(TzError::NoTimeInThisTz) => (),
+        otherwise => panic!("unexpected {:?}", otherwise),
+    }
+    match of_date_ofday_ldn("2021-03-28", "01:27:00.123456789") {
+        Err(TzError::NoTimeInThisTz) => (),
+        otherwise => panic!("unexpected {:?}", otherwise),
+    }
 }

@@ -5,7 +5,7 @@ mod date;
 pub use date::{Date, DateError, DayOfWeek, Month};
 
 mod timezone;
-pub use timezone::{TzInfo, TzOffset};
+pub use timezone::{TzError, TzInfo, TzOffset};
 
 mod span;
 pub use span::SpanNs;
@@ -23,9 +23,19 @@ use binprot_derive::{BinProtRead, BinProtWrite};
 use chrono::{TimeZone, Timelike};
 use std::ops::{Add, Rem, Sub};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct TimeNs(i64);
+
+impl std::fmt::Debug for TimeNs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let day_ns = SpanNs::DAY.to_int_ns();
+        let days = self.0.div_euclid(day_ns);
+        let ofday = self.0.rem_euclid(day_ns);
+        let date = Date::of_days_since_epoch(days as i32);
+        write!(f, "{} {}Z", date, OfDay::of_ns_since_midnight(ofday))
+    }
+}
 
 impl Add<SpanNs> for TimeNs {
     type Output = Self;
@@ -85,6 +95,14 @@ impl TimeNs {
         let ns_since_epoch = self.0 + offset.to_int_ns();
         let days = ns_since_epoch.div_euclid(SpanNs::DAY.to_int_ns());
         Date::of_days_since_epoch(days as i32)
+    }
+
+    pub fn of_date_ofday(date: Date, ofday: OfDay, tz_info: &TzInfo) -> Result<Self, TzError> {
+        tz_info.date_ofday_to_time(date, ofday)
+    }
+
+    pub fn to_string_gmt(self) -> String {
+        format!("{:?}", self)
     }
 
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
