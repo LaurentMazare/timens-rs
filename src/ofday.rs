@@ -43,7 +43,7 @@ impl std::fmt::Display for OfDay {
         let sec = self.second();
         let ns = self.nanosecond();
         if ns == 0 {
-            write!(f, "{:02}:{:02}:{02}", hr, min, sec)
+            write!(f, "{:02}:{:02}:{:02}", hr, min, sec)
         } else {
             let mut ns = ns;
             let mut ns_width = 9;

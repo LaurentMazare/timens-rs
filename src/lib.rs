@@ -70,15 +70,14 @@ impl TimeNs {
         Self(span.to_int_ns())
     }
 
-    // TODO: Add OfDay and use it rather than SpanNs
-    pub fn to_date_ofday(self, tz_info: &TzInfo) -> (Date, SpanNs) {
+    pub fn to_date_ofday(self, tz_info: &TzInfo) -> (Date, OfDay) {
         let offset = tz_info.offset(self);
         let ns_since_epoch = self.0 + offset.to_int_ns();
         let day_ns = SpanNs::DAY.to_int_ns();
         let days = ns_since_epoch.div_euclid(day_ns);
         let ofday = ns_since_epoch.rem_euclid(day_ns);
         let date = Date::of_days_since_epoch(days as i32);
-        (date, SpanNs::of_int_ns(ofday))
+        (date, OfDay::of_ns_since_midnight(ofday))
     }
 
     pub fn to_date(self, tz_info: &TzInfo) -> Date {
@@ -116,7 +115,7 @@ impl TimeNs {
                 let sec = t.second();
                 let ns = t.nanosecond();
                 if ns == 0 {
-                    format!("{:02}:{:02}:{02}", hr, min, sec)
+                    format!("{:02}:{:02}:{:02}", hr, min, sec)
                 } else {
                     let mut ns = ns;
                     let mut ns_width = 9;
