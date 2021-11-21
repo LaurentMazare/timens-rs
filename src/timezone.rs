@@ -21,7 +21,7 @@ impl TzOffset {
 
 impl TzInfo {
     fn find(&self, timens: TimeNs) -> &TzOffset {
-        let sec = timens.0.div_euclid(SpanNs::SEC.0);
+        let sec = timens.0.div_euclid(SpanNs::SEC.to_int_ns());
         let index = self
             .rest
             .partition_point(|&(start_sec, _)| sec >= start_sec);
