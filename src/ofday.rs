@@ -32,8 +32,8 @@ impl OfDay {
         self.0
     }
 
-    pub fn since_midnight(self) -> crate::SpanNs {
-        crate::SpanNs::of_int_ns(self.to_ns_since_midnight())
+    pub fn since_midnight(self) -> crate::Span {
+        crate::Span::of_int_ns(self.to_ns_since_midnight())
     }
 
     pub fn hour(self) -> i64 {

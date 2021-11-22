@@ -1,4 +1,4 @@
-use crate::{Date, OfDay, SpanNs, TimeNs};
+use crate::{Date, OfDay, Span, TimeNs};
 
 #[derive(Copy, Clone)]
 pub struct TzOffset {
@@ -40,7 +40,7 @@ impl std::error::Error for TzError {}
 
 impl TzInfo {
     fn find(&self, timens: TimeNs) -> &TzOffset {
-        let sec = timens.0.div_euclid(SpanNs::SEC.to_int_ns());
+        let sec = timens.0.div_euclid(Span::SEC.to_int_ns());
         let index = self
             .rest
             .partition_point(|&(start_sec, _)| sec >= start_sec);
@@ -51,9 +51,9 @@ impl TzInfo {
         }
     }
 
-    pub fn offset(&self, timens: TimeNs) -> SpanNs {
+    pub fn offset(&self, timens: TimeNs) -> Span {
         let fixed_timespan = self.find(timens);
-        SpanNs::of_int_sec(fixed_timespan.total_offset() as i64)
+        Span::of_int_sec(fixed_timespan.total_offset() as i64)
     }
 
     pub const GMT: TzInfo = TzInfo {
@@ -71,17 +71,17 @@ impl TzInfo {
         };
         let sec = gmt_sec - tz_info.total_offset() as i64;
         if sec >= min_sec && (self.rest.len() == next_i || sec < self.rest[next_i].0) {
-            Some(TimeNs(sec * SpanNs::SEC.to_int_ns() + nanosecond))
+            Some(TimeNs(sec * Span::SEC.to_int_ns() + nanosecond))
         } else {
             None
         }
     }
 
     pub fn date_ofday_to_time(&self, date: Date, ofday: OfDay) -> Result<TimeNs, TzError> {
-        let gmt_ns = (date - Date::UNIX_EPOCH) as i64 * SpanNs::DAY.to_int_ns();
+        let gmt_ns = (date - Date::UNIX_EPOCH) as i64 * Span::DAY.to_int_ns();
         let gmt_ns = gmt_ns + ofday.to_ns_since_midnight();
-        let gmt_sec = gmt_ns.div_euclid(SpanNs::SEC.to_int_ns());
-        let nanosecond = gmt_ns.rem_euclid(SpanNs::SEC.to_int_ns());
+        let gmt_sec = gmt_ns.div_euclid(Span::SEC.to_int_ns());
+        let nanosecond = gmt_ns.rem_euclid(Span::SEC.to_int_ns());
         let next_i = self
             .rest
             .partition_point(|&(start_sec, _)| gmt_sec >= start_sec);

@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use timens::{Date, OfDay, SpanNs, TimeNs, TzError, TzInfo, TzOffset};
+use timens::{Date, OfDay, Span, TimeNs, TzError, TzInfo, TzOffset};
 
 const GMT: TzOffset = TzOffset {
     utc_offset: 0,
@@ -47,24 +47,24 @@ fn to_date_ofday_rt(timens: TimeNs, tz_info: &TzInfo) -> (Date, OfDay) {
 
 #[test]
 fn tz() {
-    let timens = TimeNs::of_span_since_epoch(SpanNs::of_int_sec(1637437386));
-    assert_eq!(EUROPE_LONDON.offset(timens), SpanNs::ZERO);
+    let timens = TimeNs::of_span_since_epoch(Span::of_int_sec(1637437386));
+    assert_eq!(EUROPE_LONDON.offset(timens), Span::ZERO);
     let (date, ofday) = to_date_ofday_rt(timens, &EUROPE_LONDON);
     assert_eq!(date.to_string(), "2021-11-20");
     assert_eq!(ofday.to_string(), "19:43:06");
     let (date, ofday) = to_date_ofday_rt(timens, &TzInfo::GMT);
     assert_eq!(date.to_string(), "2021-11-20");
     assert_eq!(ofday.to_string(), "19:43:06");
-    let timens = TimeNs::of_span_since_epoch(SpanNs::of_int_sec(1630037386));
-    assert_eq!(EUROPE_LONDON.offset(timens), SpanNs::of_int_hr(1));
+    let timens = TimeNs::of_span_since_epoch(Span::of_int_sec(1630037386));
+    assert_eq!(EUROPE_LONDON.offset(timens), Span::of_int_hr(1));
     let (date, ofday) = to_date_ofday_rt(timens, &EUROPE_LONDON);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "05:09:46");
     let (date, ofday) = to_date_ofday_rt(timens, &TzInfo::GMT);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "04:09:46");
-    let timens = TimeNs::of_span_since_epoch(SpanNs::of_int_sec(1630037386 - 5 * 3600));
-    assert_eq!(EUROPE_LONDON.offset(timens), SpanNs::of_int_hr(1));
+    let timens = TimeNs::of_span_since_epoch(Span::of_int_sec(1630037386 - 5 * 3600));
+    assert_eq!(EUROPE_LONDON.offset(timens), Span::of_int_hr(1));
     let (date, ofday) = to_date_ofday_rt(timens, &EUROPE_LONDON);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "00:09:46");

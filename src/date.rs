@@ -195,7 +195,7 @@ impl std::fmt::Display for Date {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DateError {
     InvalidYear(u32),
     InvalidDayForMonth(u32, Month, u8),

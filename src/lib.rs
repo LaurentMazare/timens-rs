@@ -8,7 +8,7 @@ mod timezone;
 pub use timezone::{TzError, TzInfo, TzOffset};
 
 mod span;
-pub use span::SpanNs;
+pub use span::Span;
 
 mod ofday;
 pub use ofday::OfDay;
@@ -29,7 +29,7 @@ pub struct TimeNs(i64);
 
 impl std::fmt::Debug for TimeNs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let day_ns = SpanNs::DAY.to_int_ns();
+        let day_ns = Span::DAY.to_int_ns();
         let days = self.0.div_euclid(day_ns);
         let ofday = self.0.rem_euclid(day_ns);
         let date = Date::of_days_since_epoch(days as i32);
@@ -37,34 +37,82 @@ impl std::fmt::Debug for TimeNs {
     }
 }
 
-impl Add<SpanNs> for TimeNs {
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TimeParseError {
+    NoSpace,
+    DateError(date::DateError),
+    OfDayError(ofday::ParseOfDayError),
+    NoZone,
+}
+
+impl std::fmt::Display for TimeParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for TimeParseError {}
+
+impl std::convert::From<date::DateError> for TimeParseError {
+    fn from(date_error: date::DateError) -> Self {
+        TimeParseError::DateError(date_error)
+    }
+}
+
+impl std::convert::From<ofday::ParseOfDayError> for TimeParseError {
+    fn from(ofday_error: ofday::ParseOfDayError) -> Self {
+        TimeParseError::OfDayError(ofday_error)
+    }
+}
+
+impl std::str::FromStr for TimeNs {
+    type Err = TimeParseError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.split_once(' ') {
+            None => Err(TimeParseError::NoSpace),
+            Some((date, ofday_with_zone)) => {
+                let date = Date::from_str(date)?;
+                // TODO: Support other zones.
+                match ofday_with_zone.split_once('Z') {
+                    Some((ofday, z)) if z.is_empty() => {
+                        let ofday = OfDay::from_str(ofday)?;
+                        Ok(Self::of_date_ofday_gmt(date, ofday))
+                    }
+                    Some(_) | None => Err(TimeParseError::NoZone),
+                }
+            }
+        }
+    }
+}
+
+impl Add<Span> for TimeNs {
     type Output = Self;
 
-    fn add(self, other: SpanNs) -> Self {
+    fn add(self, other: Span) -> Self {
         Self(self.0 + other.to_int_ns())
     }
 }
 
-impl Sub<SpanNs> for TimeNs {
+impl Sub<Span> for TimeNs {
     type Output = Self;
 
-    fn sub(self, other: SpanNs) -> Self {
+    fn sub(self, other: Span) -> Self {
         Self(self.0 - other.to_int_ns())
     }
 }
 
 impl Sub for TimeNs {
-    type Output = SpanNs;
+    type Output = Span;
 
-    fn sub(self, other: Self) -> SpanNs {
-        SpanNs::of_int_ns(self.0 - other.0)
+    fn sub(self, other: Self) -> Span {
+        Span::of_int_ns(self.0 - other.0)
     }
 }
 
-impl Rem<SpanNs> for TimeNs {
+impl Rem<Span> for TimeNs {
     type Output = Self;
 
-    fn rem(self, other: SpanNs) -> Self {
+    fn rem(self, other: Span) -> Self {
         Self(self.0 % other.to_int_ns())
     }
 }
@@ -72,18 +120,18 @@ impl Rem<SpanNs> for TimeNs {
 impl TimeNs {
     pub const EPOCH: Self = Self(0);
 
-    pub fn to_span_since_epoch(self) -> SpanNs {
-        SpanNs::of_int_ns(self.0)
+    pub fn to_span_since_epoch(self) -> Span {
+        Span::of_int_ns(self.0)
     }
 
-    pub fn of_span_since_epoch(span: SpanNs) -> Self {
+    pub fn of_span_since_epoch(span: Span) -> Self {
         Self(span.to_int_ns())
     }
 
     pub fn to_date_ofday(self, tz_info: &TzInfo) -> (Date, OfDay) {
         let offset = tz_info.offset(self);
         let ns_since_epoch = self.0 + offset.to_int_ns();
-        let day_ns = SpanNs::DAY.to_int_ns();
+        let day_ns = Span::DAY.to_int_ns();
         let days = ns_since_epoch.div_euclid(day_ns);
         let ofday = ns_since_epoch.rem_euclid(day_ns);
         let date = Date::of_days_since_epoch(days as i32);
@@ -93,7 +141,7 @@ impl TimeNs {
     pub fn to_date(self, tz_info: &TzInfo) -> Date {
         let offset = tz_info.offset(self);
         let ns_since_epoch = self.0 + offset.to_int_ns();
-        let days = ns_since_epoch.div_euclid(SpanNs::DAY.to_int_ns());
+        let days = ns_since_epoch.div_euclid(Span::DAY.to_int_ns());
         Date::of_days_since_epoch(days as i32)
     }
 
@@ -101,12 +149,17 @@ impl TimeNs {
         tz_info.date_ofday_to_time(date, ofday)
     }
 
+    pub fn of_date_ofday_gmt(date: Date, ofday: OfDay) -> Self {
+        let gmt_ns = (date - Date::UNIX_EPOCH) as i64 * Span::DAY.to_int_ns();
+        TimeNs(gmt_ns + ofday.to_ns_since_midnight())
+    }
+
     pub fn to_string_gmt(self) -> String {
         format!("{:?}", self)
     }
 
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
-        let day_ns = SpanNs::DAY.to_int_ns();
+        let day_ns = Span::DAY.to_int_ns();
         let sec = self.0.div_euclid(day_ns);
         let ns = self.0.rem_euclid(day_ns);
         chrono::NaiveDateTime::from_timestamp(sec, ns as u32)

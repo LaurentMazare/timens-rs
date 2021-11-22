@@ -5,7 +5,7 @@ use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
     feature = "binio",
     derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite)
 )]
-pub struct SpanNs(i64);
+pub struct Span(i64);
 
 macro_rules! span_conv {
     ($to_fn:ident, $of_fn_int:ident, $of_fn: ident, $cst: ident, $e: expr) => {
@@ -25,7 +25,7 @@ macro_rules! span_conv {
     };
 }
 
-impl SpanNs {
+impl Span {
     pub const ZERO: Self = Self(0);
 
     span_conv!(to_ns, of_int_ns, of_ns, NS, 1);
@@ -71,7 +71,7 @@ fn remove_trailing_zeros(value: i64, max_digits: usize) -> (i64, usize) {
     (value, max_digits)
 }
 
-impl std::fmt::Display for SpanNs {
+impl std::fmt::Display for Span {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let ns = self.0;
         if ns == 0 {
@@ -129,7 +129,7 @@ impl std::fmt::Display for SpanNs {
     }
 }
 
-impl std::fmt::Debug for SpanNs {
+impl std::fmt::Debug for Span {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         std::fmt::Display::fmt(self, f)
     }
@@ -151,7 +151,7 @@ impl std::fmt::Display for ParseSpanError {
 
 impl std::error::Error for ParseSpanError {}
 
-impl std::str::FromStr for SpanNs {
+impl std::str::FromStr for Span {
     type Err = ParseSpanError;
 
     // TODO: Maybe add a bit of validation to avoid 1d1d for example.
@@ -169,7 +169,7 @@ impl std::str::FromStr for SpanNs {
             }
             Some(_) => false,
         };
-        let mut res = SpanNs::ZERO;
+        let mut res = Span::ZERO;
         let mut value = 0;
         let mut frac_value = 0;
         let mut frac_digits = 1;
@@ -182,48 +182,48 @@ impl std::str::FromStr for SpanNs {
                     false
                 }
                 'd' => {
-                    res = res + SpanNs::DAY * value;
+                    res = res + Span::DAY * value;
                     if frac_value != 0 {
-                        res = res + SpanNs((SpanNs::DAY.0 * frac_value) / frac_digits)
+                        res = res + Span((Span::DAY.0 * frac_value) / frac_digits)
                     }
                     true
                 }
                 'h' => {
-                    res = res + SpanNs::HR * value;
+                    res = res + Span::HR * value;
                     if frac_value != 0 {
-                        res = res + SpanNs((SpanNs::HR.0 * frac_value) / frac_digits)
+                        res = res + Span((Span::HR.0 * frac_value) / frac_digits)
                     }
                     true
                 }
                 'm' => {
                     match chars.next_if_eq(&'s') {
                         Some(_) => {
-                            res = res + SpanNs::MS * value;
+                            res = res + Span::MS * value;
                             if frac_value != 0 {
-                                res = res + SpanNs((SpanNs::MS.0 * frac_value) / frac_digits)
+                                res = res + Span((Span::MS.0 * frac_value) / frac_digits)
                             }
                         }
                         None => {
-                            res = res + SpanNs::MIN * value;
+                            res = res + Span::MIN * value;
                             if frac_value != 0 {
-                                res = res + SpanNs((SpanNs::MIN.0 * frac_value) / frac_digits)
+                                res = res + Span((Span::MIN.0 * frac_value) / frac_digits)
                             }
                         }
                     }
                     true
                 }
                 's' => {
-                    res = res + SpanNs::SEC * value;
+                    res = res + Span::SEC * value;
                     if frac_value != 0 {
-                        res = res + SpanNs((SpanNs::SEC.0 * frac_value) / frac_digits)
+                        res = res + Span((Span::SEC.0 * frac_value) / frac_digits)
                     }
                     true
                 }
                 'u' => match chars.next_if_eq(&'s') {
                     Some(_) => {
-                        res = res + SpanNs::US * value;
+                        res = res + Span::US * value;
                         if frac_value != 0 {
-                            res = res + SpanNs((SpanNs::US.0 * frac_value) / frac_digits)
+                            res = res + Span((Span::US.0 * frac_value) / frac_digits)
                         }
                         true
                     }
@@ -231,9 +231,9 @@ impl std::str::FromStr for SpanNs {
                 },
                 'n' => match chars.next_if_eq(&'s') {
                     Some(_) => {
-                        res = res + SpanNs::NS * value;
+                        res = res + Span::NS * value;
                         if frac_value * 2 > frac_digits {
-                            res = res + SpanNs::NS;
+                            res = res + Span::NS;
                         }
                         true
                     }
@@ -266,7 +266,7 @@ impl std::str::FromStr for SpanNs {
     }
 }
 
-impl Add for SpanNs {
+impl Add for Span {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -274,7 +274,7 @@ impl Add for SpanNs {
     }
 }
 
-impl Neg for SpanNs {
+impl Neg for Span {
     type Output = Self;
 
     fn neg(self) -> Self {
@@ -282,7 +282,7 @@ impl Neg for SpanNs {
     }
 }
 
-impl Sub for SpanNs {
+impl Sub for Span {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {
@@ -290,7 +290,7 @@ impl Sub for SpanNs {
     }
 }
 
-impl Mul<i64> for SpanNs {
+impl Mul<i64> for Span {
     type Output = Self;
 
     fn mul(self, other: i64) -> Self {
@@ -298,7 +298,7 @@ impl Mul<i64> for SpanNs {
     }
 }
 
-impl Mul<f64> for SpanNs {
+impl Mul<f64> for Span {
     type Output = Self;
 
     fn mul(self, other: f64) -> Self {
@@ -306,7 +306,7 @@ impl Mul<f64> for SpanNs {
     }
 }
 
-impl Rem for SpanNs {
+impl Rem for Span {
     type Output = Self;
 
     fn rem(self, other: Self) -> Self {
@@ -314,7 +314,7 @@ impl Rem for SpanNs {
     }
 }
 
-impl Div for SpanNs {
+impl Div for Span {
     type Output = f64;
 
     fn div(self, other: Self) -> f64 {
@@ -322,7 +322,7 @@ impl Div for SpanNs {
     }
 }
 
-impl Div<i64> for SpanNs {
+impl Div<i64> for Span {
     type Output = Self;
 
     fn div(self, other: i64) -> Self {
@@ -330,7 +330,7 @@ impl Div<i64> for SpanNs {
     }
 }
 
-impl Div<f64> for SpanNs {
+impl Div<f64> for Span {
     type Output = Self;
 
     fn div(self, other: f64) -> Self {
