@@ -158,6 +158,47 @@ impl Time {
         format!("{:?}", self)
     }
 
+    pub fn write_tz<W: std::fmt::Write>(
+        self,
+        w: &mut W,
+        tz_info: &TzInfo,
+    ) -> Result<(), std::fmt::Error> {
+        let offset_sec = tz_info.find(self).total_offset_sec();
+        let ns_since_epoch = self.0 + offset_sec as i64 * Span::SEC.to_int_ns();
+        let day_ns = Span::DAY.to_int_ns();
+        let days = ns_since_epoch.div_euclid(day_ns);
+        let ofday = OfDay::of_ns_since_midnight(ns_since_epoch.rem_euclid(day_ns));
+        let date = Date::of_days_since_epoch(days as i32);
+        if offset_sec == 0 {
+            write!(w, "{} {}Z", date, ofday)
+        } else {
+            let (abs_offset, sign) = if offset_sec < 0 {
+                (-offset_sec, '-')
+            } else {
+                (offset_sec, '+')
+            };
+            let offset_sec = abs_offset % 60;
+            let abs_offset = abs_offset / 60;
+            let offset_min = abs_offset % 60;
+            let offset_hr = abs_offset / 60;
+            write!(
+                w,
+                "{} {}{}{:02}:{:02}",
+                date, ofday, sign, offset_hr, offset_min
+            )?;
+            if offset_sec != 0 {
+                write!(w, ":{:02}", offset_sec)?;
+            }
+            Ok(())
+        }
+    }
+
+    pub fn to_string_tz(self, tz_info: &TzInfo) -> String {
+        let mut s = String::new();
+        self.write_tz(&mut s, tz_info).unwrap();
+        s
+    }
+
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
         let day_ns = Span::DAY.to_int_ns();
         let sec = self.0.div_euclid(day_ns);

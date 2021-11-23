@@ -18,7 +18,7 @@ impl TzOffset {
         dst_offset: 0,
     };
 
-    fn total_offset(&self) -> i32 {
+    pub fn total_offset_sec(&self) -> i32 {
         self.utc_offset + self.dst_offset
     }
 }
@@ -39,7 +39,7 @@ impl std::fmt::Display for TzError {
 impl std::error::Error for TzError {}
 
 impl TzInfo {
-    fn find(&self, time: Time) -> &TzOffset {
+    pub fn find(&self, time: Time) -> &TzOffset {
         let sec = time.0.div_euclid(Span::SEC.to_int_ns());
         let index = self
             .rest
@@ -53,7 +53,7 @@ impl TzInfo {
 
     pub fn offset(&self, time: Time) -> Span {
         let fixed_timespan = self.find(time);
-        Span::of_int_sec(fixed_timespan.total_offset() as i64)
+        Span::of_int_sec(fixed_timespan.total_offset_sec() as i64)
     }
 
     pub const GMT: TzInfo = TzInfo {
@@ -69,7 +69,7 @@ impl TzInfo {
         } else {
             self.rest[next_i - 1]
         };
-        let sec = gmt_sec - tz_info.total_offset() as i64;
+        let sec = gmt_sec - tz_info.total_offset_sec() as i64;
         if sec >= min_sec && (self.rest.len() == next_i || sec < self.rest[next_i].0) {
             Some(Time(sec * Span::SEC.to_int_ns() + nanosecond))
         } else {

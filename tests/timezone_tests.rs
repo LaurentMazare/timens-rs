@@ -71,6 +71,11 @@ fn tz() {
     let (date, ofday) = to_date_ofday_rt(time, &TzInfo::GMT);
     assert_eq!(date.to_string(), "2021-08-26");
     assert_eq!(ofday.to_string(), "23:09:46");
+    assert_eq!(time.to_string_tz(&TzInfo::GMT), "2021-08-26 23:09:46Z");
+    assert_eq!(
+        time.to_string_tz(&EUROPE_LONDON),
+        "2021-08-27 00:09:46+01:00"
+    );
 }
 
 fn of_date_ofday_ldn(date: &str, ofday: &str) -> Result<Time, TzError> {
