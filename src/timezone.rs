@@ -1,4 +1,4 @@
-use crate::{Date, OfDay, Span, TimeNs};
+use crate::{Date, OfDay, Span, Time};
 
 #[derive(Copy, Clone)]
 pub struct TzOffset {
@@ -27,7 +27,7 @@ impl TzOffset {
 #[allow(clippy::enum_variant_names)]
 pub enum TzError {
     NoTimeInThisTz,
-    TwoTimesInThisTz(TimeNs, TimeNs),
+    TwoTimesInThisTz(Time, Time),
 }
 
 impl std::fmt::Display for TzError {
@@ -39,8 +39,8 @@ impl std::fmt::Display for TzError {
 impl std::error::Error for TzError {}
 
 impl TzInfo {
-    fn find(&self, timens: TimeNs) -> &TzOffset {
-        let sec = timens.0.div_euclid(Span::SEC.to_int_ns());
+    fn find(&self, time: Time) -> &TzOffset {
+        let sec = time.0.div_euclid(Span::SEC.to_int_ns());
         let index = self
             .rest
             .partition_point(|&(start_sec, _)| sec >= start_sec);
@@ -51,8 +51,8 @@ impl TzInfo {
         }
     }
 
-    pub fn offset(&self, timens: TimeNs) -> Span {
-        let fixed_timespan = self.find(timens);
+    pub fn offset(&self, time: Time) -> Span {
+        let fixed_timespan = self.find(time);
         Span::of_int_sec(fixed_timespan.total_offset() as i64)
     }
 
@@ -61,7 +61,7 @@ impl TzInfo {
         rest: &[],
     };
 
-    fn valid_timens(&self, gmt_sec: i64, nanosecond: i64, next_i: usize) -> Option<TimeNs> {
+    fn valid_time(&self, gmt_sec: i64, nanosecond: i64, next_i: usize) -> Option<Time> {
         let (min_sec, tz_info) = if next_i == 0 {
             (i64::MIN, self.first)
         } else if next_i > self.rest.len() {
@@ -71,13 +71,13 @@ impl TzInfo {
         };
         let sec = gmt_sec - tz_info.total_offset() as i64;
         if sec >= min_sec && (self.rest.len() == next_i || sec < self.rest[next_i].0) {
-            Some(TimeNs(sec * Span::SEC.to_int_ns() + nanosecond))
+            Some(Time(sec * Span::SEC.to_int_ns() + nanosecond))
         } else {
             None
         }
     }
 
-    pub fn date_ofday_to_time(&self, date: Date, ofday: OfDay) -> Result<TimeNs, TzError> {
+    pub fn date_ofday_to_time(&self, date: Date, ofday: OfDay) -> Result<Time, TzError> {
         let gmt_ns = (date - Date::UNIX_EPOCH) as i64 * Span::DAY.to_int_ns();
         let gmt_ns = gmt_ns + ofday.to_ns_since_midnight();
         let gmt_sec = gmt_ns.div_euclid(Span::SEC.to_int_ns());
@@ -86,17 +86,17 @@ impl TzInfo {
             .rest
             .partition_point(|&(start_sec, _)| gmt_sec >= start_sec);
         if next_i == 0 {
-            let t1 = self.valid_timens(gmt_sec, nanosecond, next_i);
-            let t2 = self.valid_timens(gmt_sec, nanosecond, next_i + 1);
+            let t1 = self.valid_time(gmt_sec, nanosecond, next_i);
+            let t2 = self.valid_time(gmt_sec, nanosecond, next_i + 1);
             match (t1, t2) {
                 (None, None) => Err(TzError::NoTimeInThisTz),
                 (Some(v), None) | (None, Some(v)) => Ok(v),
                 (Some(v1), Some(v2)) => Err(TzError::TwoTimesInThisTz(v1, v2)),
             }
         } else {
-            let t0 = self.valid_timens(gmt_sec, nanosecond, next_i - 1);
-            let t1 = self.valid_timens(gmt_sec, nanosecond, next_i);
-            let t2 = self.valid_timens(gmt_sec, nanosecond, next_i + 1);
+            let t0 = self.valid_time(gmt_sec, nanosecond, next_i - 1);
+            let t1 = self.valid_time(gmt_sec, nanosecond, next_i);
+            let t2 = self.valid_time(gmt_sec, nanosecond, next_i + 1);
             match (t0, t1, t2) {
                 (None, None, None) => Err(TzError::NoTimeInThisTz),
                 (Some(v), None, None) | (None, Some(v), None) | (None, None, Some(v)) => Ok(v),

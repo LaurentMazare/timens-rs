@@ -25,9 +25,9 @@ use std::ops::{Add, Rem, Sub};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
-pub struct TimeNs(i64);
+pub struct Time(i64);
 
-impl std::fmt::Debug for TimeNs {
+impl std::fmt::Debug for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let day_ns = Span::DAY.to_int_ns();
         let days = self.0.div_euclid(day_ns);
@@ -65,7 +65,7 @@ impl std::convert::From<ofday::ParseOfDayError> for TimeParseError {
     }
 }
 
-impl std::str::FromStr for TimeNs {
+impl std::str::FromStr for Time {
     type Err = TimeParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.split_once(' ') {
@@ -85,7 +85,7 @@ impl std::str::FromStr for TimeNs {
     }
 }
 
-impl Add<Span> for TimeNs {
+impl Add<Span> for Time {
     type Output = Self;
 
     fn add(self, other: Span) -> Self {
@@ -93,7 +93,7 @@ impl Add<Span> for TimeNs {
     }
 }
 
-impl Sub<Span> for TimeNs {
+impl Sub<Span> for Time {
     type Output = Self;
 
     fn sub(self, other: Span) -> Self {
@@ -101,7 +101,7 @@ impl Sub<Span> for TimeNs {
     }
 }
 
-impl Sub for TimeNs {
+impl Sub for Time {
     type Output = Span;
 
     fn sub(self, other: Self) -> Span {
@@ -109,7 +109,7 @@ impl Sub for TimeNs {
     }
 }
 
-impl Rem<Span> for TimeNs {
+impl Rem<Span> for Time {
     type Output = Self;
 
     fn rem(self, other: Span) -> Self {
@@ -117,7 +117,7 @@ impl Rem<Span> for TimeNs {
     }
 }
 
-impl TimeNs {
+impl Time {
     pub const EPOCH: Self = Self(0);
 
     pub fn to_span_since_epoch(self) -> Span {
@@ -151,7 +151,7 @@ impl TimeNs {
 
     pub fn of_date_ofday_gmt(date: Date, ofday: OfDay) -> Self {
         let gmt_ns = (date - Date::UNIX_EPOCH) as i64 * Span::DAY.to_int_ns();
-        TimeNs(gmt_ns + ofday.to_ns_since_midnight())
+        Time(gmt_ns + ofday.to_ns_since_midnight())
     }
 
     pub fn to_string_gmt(self) -> String {
