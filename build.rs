@@ -40,17 +40,37 @@ fn convert_bad_chars(name: &str) -> String {
 fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<()> {
     let zones =
         table.zonesets.keys().chain(table.links.keys()).collect::<std::collections::BTreeSet<_>>();
-    writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\npub enum Tz {{")?;
+    writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n")?;
+    writeln!(f, "pub enum Tz {{")?;
+    for zone in &zones {
+        writeln!(f, "    /// {}", zone)?;
+        writeln!(f, "   {},", convert_bad_chars(zone))?;
+    }
+    writeln!(f, "}}\n")?;
+
+    writeln!(f, "impl Tz {{")?;
+    writeln!(f, "    pub fn name(self) -> &'static str {{")?;
+    writeln!(f, "        match self {{")?;
     for zone in &zones {
         let zone_name = convert_bad_chars(zone);
-        writeln!(
-            f,
-            "    /// {raw_zone_name}\n    {zone},",
-            zone = zone_name,
-            raw_zone_name = zone
-        )?;
+        writeln!(f, "            Tz::{} => \"{}\",", zone_name, zone)?;
     }
+    writeln!(f, "        }}")?;
+    writeln!(f, "    }}")?;
     writeln!(f, "}}")?;
+
+    writeln!(f, "impl std::fmt::Debug for Tz {{")?;
+    writeln!(f, "    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {{")?;
+    writeln!(f, "        f.write_str(self.name().as_ref())")?;
+    writeln!(f, "    }}")?;
+    writeln!(f, "}}\n")?;
+
+    writeln!(f, "impl std::fmt::Display for Tz {{")?;
+    writeln!(f, "    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {{")?;
+    writeln!(f, "        f.write_str(self.name().as_ref())")?;
+    writeln!(f, "    }}")?;
+    writeln!(f, "}}\n")?;
+
     Ok(())
 }
 
