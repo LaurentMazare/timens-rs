@@ -1,10 +1,7 @@
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "binio",
-    derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite)
-)]
+#[cfg_attr(feature = "binio", derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite))]
 pub struct Span(i64);
 
 macro_rules! span_conv {

@@ -113,10 +113,7 @@ impl DayOfWeek {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "binio",
-    derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite)
-)]
+#[cfg_attr(feature = "binio", derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite))]
 pub enum Month {
     Jan,
     Feb,
@@ -185,13 +182,7 @@ impl Month {
 
 impl std::fmt::Display for Date {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:04}-{:02}-{:02}",
-            self.year(),
-            self.month_int(),
-            self.day()
-        )
+        write!(f, "{:04}-{:02}-{:02}", self.year(), self.month_int(), self.day())
     }
 }
 
@@ -262,12 +253,7 @@ impl Date {
     }
 
     pub fn to_string_american(self) -> String {
-        format!(
-            "{:02}/{:02}/{:04}",
-            self.month_int(),
-            self.day(),
-            self.year()
-        )
+        format!("{:02}/{:02}/{:04}", self.month_int(), self.day(), self.year())
     }
 
     pub const UNIX_EPOCH: Self = match Self::create(1970, Month::Jan, 1) {
@@ -288,11 +274,7 @@ impl Date {
     /// or Feb 29 depending on whether it's a leap year or not.
     pub fn add_months(self, m: i32) -> Self {
         let total_months = self.month_int() as i32 + m;
-        let diff_y = if total_months < 0 {
-            (total_months + 1) / 12 - 1
-        } else {
-            total_months / 12
-        };
+        let diff_y = if total_months < 0 { (total_months + 1) / 12 - 1 } else { total_months / 12 };
         let y = (self.year() as i32 + diff_y) as u32;
         let m = total_months % 12;
         let (y, m) = match m.cmp(&0) {

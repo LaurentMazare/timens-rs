@@ -13,10 +13,7 @@ pub struct TzInfo {
 }
 
 impl TzOffset {
-    pub const ZERO: TzOffset = TzOffset {
-        utc_offset: 0,
-        dst_offset: 0,
-    };
+    pub const ZERO: TzOffset = TzOffset { utc_offset: 0, dst_offset: 0 };
 
     pub fn total_offset_sec(&self) -> i32 {
         self.utc_offset + self.dst_offset
@@ -41,9 +38,7 @@ impl std::error::Error for TzError {}
 impl TzInfo {
     pub fn find(&self, time: Time) -> &TzOffset {
         let sec = time.0.div_euclid(Span::SEC.to_int_ns());
-        let index = self
-            .rest
-            .partition_point(|&(start_sec, _)| sec >= start_sec);
+        let index = self.rest.partition_point(|&(start_sec, _)| sec >= start_sec);
         if index == 0 {
             &self.first
         } else {
@@ -56,10 +51,7 @@ impl TzInfo {
         Span::of_int_sec(fixed_timespan.total_offset_sec() as i64)
     }
 
-    pub const GMT: TzInfo = TzInfo {
-        first: TzOffset::ZERO,
-        rest: &[],
-    };
+    pub const GMT: TzInfo = TzInfo { first: TzOffset::ZERO, rest: &[] };
 
     fn valid_time(&self, gmt_sec: i64, nanosecond: i64, next_i: usize) -> Option<Time> {
         let (min_sec, tz_info) = if next_i == 0 {
@@ -82,9 +74,7 @@ impl TzInfo {
         let gmt_ns = gmt_ns + ofday.to_ns_since_midnight();
         let gmt_sec = gmt_ns.div_euclid(Span::SEC.to_int_ns());
         let nanosecond = gmt_ns.rem_euclid(Span::SEC.to_int_ns());
-        let next_i = self
-            .rest
-            .partition_point(|&(start_sec, _)| gmt_sec >= start_sec);
+        let next_i = self.rest.partition_point(|&(start_sec, _)| gmt_sec >= start_sec);
         if next_i == 0 {
             let t1 = self.valid_time(gmt_sec, nanosecond, next_i);
             let t2 = self.valid_time(gmt_sec, nanosecond, next_i + 1);

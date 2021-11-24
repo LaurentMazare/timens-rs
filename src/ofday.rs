@@ -1,8 +1,5 @@
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(
-    feature = "binio",
-    derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite)
-)]
+#[cfg_attr(feature = "binio", derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite))]
 pub struct OfDay(i64);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -83,15 +80,7 @@ impl std::fmt::Display for OfDay {
                 ns /= 10;
                 ns_width -= 1;
             }
-            write!(
-                f,
-                "{:02}:{:02}:{:02}.{:0ns_width$}",
-                hr,
-                min,
-                sec,
-                ns,
-                ns_width = ns_width
-            )
+            write!(f, "{:02}:{:02}:{:02}.{:0ns_width$}", hr, min, sec, ns, ns_width = ns_width)
         }
     }
 }

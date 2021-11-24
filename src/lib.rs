@@ -13,6 +13,9 @@ pub use span::Span;
 mod ofday;
 pub use ofday::OfDay;
 
+mod timezone_data;
+pub use timezone_data::Tz;
+
 #[cfg(feature = "binio")]
 extern crate binprot;
 #[cfg(feature = "binio")]
@@ -172,20 +175,13 @@ impl Time {
         if offset_sec == 0 {
             write!(w, "{} {}Z", date, ofday)
         } else {
-            let (abs_offset, sign) = if offset_sec < 0 {
-                (-offset_sec, '-')
-            } else {
-                (offset_sec, '+')
-            };
+            let (abs_offset, sign) =
+                if offset_sec < 0 { (-offset_sec, '-') } else { (offset_sec, '+') };
             let offset_sec = abs_offset % 60;
             let abs_offset = abs_offset / 60;
             let offset_min = abs_offset % 60;
             let offset_hr = abs_offset / 60;
-            write!(
-                w,
-                "{} {}{}{:02}:{:02}",
-                date, ofday, sign, offset_hr, offset_min
-            )?;
+            write!(w, "{} {}{}{:02}:{:02}", date, ofday, sign, offset_hr, offset_min)?;
             if offset_sec != 0 {
                 write!(w, ":{:02}", offset_sec)?;
             }
@@ -215,11 +211,7 @@ impl Time {
 
     pub fn to_ofday_string_no_trailing_zeros(self, tz: &chrono_tz::Tz) -> String {
         match self.to_datetime(tz) {
-            None => format!(
-                "unable to format for timezone {} {:?}",
-                self.to_naive_datetime(),
-                tz
-            ),
+            None => format!("unable to format for timezone {} {:?}", self.to_naive_datetime(), tz),
             Some(t) => {
                 let t = t.time();
                 let hr = t.hour();
