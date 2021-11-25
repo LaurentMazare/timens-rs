@@ -131,8 +131,8 @@ impl Time {
         Self(span.to_int_ns())
     }
 
-    pub fn to_date_ofday(self, tz_info: &TzInfo) -> (Date, OfDay) {
-        let offset = tz_info.offset(self);
+    pub fn to_date_ofday(self, tz: Tz) -> (Date, OfDay) {
+        let offset = tz.tz_info().offset(self);
         let ns_since_epoch = self.0 + offset.to_int_ns();
         let day_ns = Span::DAY.to_int_ns();
         let days = ns_since_epoch.div_euclid(day_ns);
@@ -141,15 +141,15 @@ impl Time {
         (date, OfDay::of_ns_since_midnight(ofday))
     }
 
-    pub fn to_date(self, tz_info: &TzInfo) -> Date {
-        let offset = tz_info.offset(self);
+    pub fn to_date(self, tz: Tz) -> Date {
+        let offset = tz.tz_info().offset(self);
         let ns_since_epoch = self.0 + offset.to_int_ns();
         let days = ns_since_epoch.div_euclid(Span::DAY.to_int_ns());
         Date::of_days_since_epoch(days as i32)
     }
 
-    pub fn of_date_ofday(date: Date, ofday: OfDay, tz_info: &TzInfo) -> Result<Self, TzError> {
-        tz_info.date_ofday_to_time(date, ofday)
+    pub fn of_date_ofday(date: Date, ofday: OfDay, tz: Tz) -> Result<Self, TzError> {
+        tz.tz_info().date_ofday_to_time(date, ofday)
     }
 
     pub fn of_date_ofday_gmt(date: Date, ofday: OfDay) -> Self {
@@ -161,12 +161,8 @@ impl Time {
         format!("{:?}", self)
     }
 
-    pub fn write_tz<W: std::fmt::Write>(
-        self,
-        w: &mut W,
-        tz_info: &TzInfo,
-    ) -> Result<(), std::fmt::Error> {
-        let offset_sec = tz_info.find(self).total_offset_sec();
+    pub fn write_tz<W: std::fmt::Write>(self, w: &mut W, tz: Tz) -> Result<(), std::fmt::Error> {
+        let offset_sec = tz.tz_info().find(self).total_offset_sec();
         let ns_since_epoch = self.0 + offset_sec as i64 * Span::SEC.to_int_ns();
         let day_ns = Span::DAY.to_int_ns();
         let days = ns_since_epoch.div_euclid(day_ns);
@@ -189,9 +185,9 @@ impl Time {
         }
     }
 
-    pub fn to_string_tz(self, tz_info: &TzInfo) -> String {
+    pub fn to_string_tz(self, tz: Tz) -> String {
         let mut s = String::new();
-        self.write_tz(&mut s, tz_info).unwrap();
+        self.write_tz(&mut s, tz).unwrap();
         s
     }
 

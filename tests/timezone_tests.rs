@@ -1,73 +1,48 @@
 use std::str::FromStr;
-use timens::{Date, OfDay, Span, Time, TzError, TzInfo, TzOffset};
+use timens::{Date, OfDay, Span, Time, Tz, TzError};
 
-const GMT: TzOffset = TzOffset { utc_offset: 0, dst_offset: 0 };
-
-const BST: TzOffset = TzOffset { utc_offset: 0, dst_offset: 3600 };
-
-const REST: [(i64, TzOffset); 16] = [
-    (1509238800, GMT),
-    (1521939600, BST),
-    (1540688400, GMT),
-    (1553994000, BST),
-    (1572138000, GMT),
-    (1585443600, BST),
-    (1603587600, GMT),
-    (1616893200, BST),
-    (1635642000, GMT),
-    (1648342800, BST),
-    (1667091600, GMT),
-    (1679792400, BST),
-    (1698541200, GMT),
-    (1711846800, BST),
-    (1729990800, GMT),
-    (1743296400, BST),
-];
-
-const EUROPE_LONDON: TzInfo =
-    TzInfo { first: TzOffset { utc_offset: 0, dst_offset: 3600 }, rest: &REST };
-
-fn to_date_ofday_rt(time: Time, tz_info: &TzInfo) -> (Date, OfDay) {
-    let (date, ofday) = time.to_date_ofday(tz_info);
-    let rt_time = Time::of_date_ofday(date, ofday, tz_info).unwrap();
+fn to_date_ofday_rt(time: Time, tz: Tz) -> (Date, OfDay) {
+    let (date, ofday) = time.to_date_ofday(tz);
+    let rt_time = Time::of_date_ofday(date, ofday, tz).unwrap();
     assert_eq!(time, rt_time);
     (date, ofday)
 }
 
 #[test]
 fn tz() {
+    let europe_london = Tz::Europe__London.tz_info();
     let time = Time::of_span_since_epoch(Span::of_int_sec(1637437386));
-    assert_eq!(EUROPE_LONDON.offset(time), Span::ZERO);
-    let (date, ofday) = to_date_ofday_rt(time, &EUROPE_LONDON);
+    assert_eq!(europe_london.offset(time), Span::ZERO);
+    let (date, ofday) = to_date_ofday_rt(time, Tz::Europe__London);
     assert_eq!(date.to_string(), "2021-11-20");
     assert_eq!(ofday.to_string(), "19:43:06");
-    let (date, ofday) = to_date_ofday_rt(time, &TzInfo::GMT);
+    let (date, ofday) = to_date_ofday_rt(time, Tz::GMT);
     assert_eq!(date.to_string(), "2021-11-20");
     assert_eq!(ofday.to_string(), "19:43:06");
     let time = Time::of_span_since_epoch(Span::of_int_sec(1630037386));
-    assert_eq!(EUROPE_LONDON.offset(time), Span::of_int_hr(1));
-    let (date, ofday) = to_date_ofday_rt(time, &EUROPE_LONDON);
+    assert_eq!(europe_london.offset(time), Span::of_int_hr(1));
+    let (date, ofday) = to_date_ofday_rt(time, Tz::Europe__London);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "05:09:46");
-    let (date, ofday) = to_date_ofday_rt(time, &TzInfo::GMT);
+    let (date, ofday) = to_date_ofday_rt(time, Tz::GMT);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "04:09:46");
     let time = Time::of_span_since_epoch(Span::of_int_sec(1630037386 - 5 * 3600));
-    assert_eq!(EUROPE_LONDON.offset(time), Span::of_int_hr(1));
-    let (date, ofday) = to_date_ofday_rt(time, &EUROPE_LONDON);
+    assert_eq!(europe_london.offset(time), Span::of_int_hr(1));
+    let (date, ofday) = to_date_ofday_rt(time, Tz::Europe__London);
     assert_eq!(date.to_string(), "2021-08-27");
     assert_eq!(ofday.to_string(), "00:09:46");
-    let (date, ofday) = to_date_ofday_rt(time, &TzInfo::GMT);
+    let (date, ofday) = to_date_ofday_rt(time, Tz::GMT);
     assert_eq!(date.to_string(), "2021-08-26");
     assert_eq!(ofday.to_string(), "23:09:46");
-    assert_eq!(time.to_string_tz(&TzInfo::GMT), "2021-08-26 23:09:46Z");
-    assert_eq!(time.to_string_tz(&EUROPE_LONDON), "2021-08-27 00:09:46+01:00");
+    assert_eq!(time.to_string_tz(Tz::GMT), "2021-08-26 23:09:46Z");
+    assert_eq!(time.to_string_tz(Tz::Europe__London), "2021-08-27 00:09:46+01:00");
 }
 
 fn of_date_ofday_ldn(date: &str, ofday: &str) -> Result<Time, TzError> {
     let date = Date::from_str(date).unwrap();
     let ofday = OfDay::from_str(ofday).unwrap();
-    Time::of_date_ofday(date, ofday, &EUROPE_LONDON)
+    Time::of_date_ofday(date, ofday, Tz::Europe__London)
 }
 
 #[test]
