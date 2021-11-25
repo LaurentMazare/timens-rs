@@ -57,7 +57,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     }
     writeln!(f, "        }}")?;
     writeln!(f, "    }}")?;
-    writeln!(f, "}}")?;
+    writeln!(f, "}}\n")?;
 
     writeln!(f, "impl std::fmt::Debug for Tz {{")?;
     writeln!(f, "    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {{")?;

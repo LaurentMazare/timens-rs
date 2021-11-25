@@ -43,8 +43,5 @@ fn to_string() {
     assert_eq!("1.1d".parse::<Span>().unwrap(), Span::DAY + Span::MIN * 144);
 
     // Some weird formatting
-    assert_eq!(
-        "1.d0s.0s.1d".parse::<Span>().unwrap(),
-        Span::DAY + Span::MIN * 144
-    );
+    assert_eq!("1.d0s.0s.1d".parse::<Span>().unwrap(), Span::DAY + Span::MIN * 144);
 }

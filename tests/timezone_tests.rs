@@ -1,15 +1,9 @@
 use std::str::FromStr;
 use timens::{Date, OfDay, Span, Time, TzError, TzInfo, TzOffset};
 
-const GMT: TzOffset = TzOffset {
-    utc_offset: 0,
-    dst_offset: 0,
-};
+const GMT: TzOffset = TzOffset { utc_offset: 0, dst_offset: 0 };
 
-const BST: TzOffset = TzOffset {
-    utc_offset: 0,
-    dst_offset: 3600,
-};
+const BST: TzOffset = TzOffset { utc_offset: 0, dst_offset: 3600 };
 
 const REST: [(i64, TzOffset); 16] = [
     (1509238800, GMT),
@@ -30,13 +24,8 @@ const REST: [(i64, TzOffset); 16] = [
     (1743296400, BST),
 ];
 
-const EUROPE_LONDON: TzInfo = TzInfo {
-    first: TzOffset {
-        utc_offset: 0,
-        dst_offset: 3600,
-    },
-    rest: &REST,
-};
+const EUROPE_LONDON: TzInfo =
+    TzInfo { first: TzOffset { utc_offset: 0, dst_offset: 3600 }, rest: &REST };
 
 fn to_date_ofday_rt(time: Time, tz_info: &TzInfo) -> (Date, OfDay) {
     let (date, ofday) = time.to_date_ofday(tz_info);
@@ -72,10 +61,7 @@ fn tz() {
     assert_eq!(date.to_string(), "2021-08-26");
     assert_eq!(ofday.to_string(), "23:09:46");
     assert_eq!(time.to_string_tz(&TzInfo::GMT), "2021-08-26 23:09:46Z");
-    assert_eq!(
-        time.to_string_tz(&EUROPE_LONDON),
-        "2021-08-27 00:09:46+01:00"
-    );
+    assert_eq!(time.to_string_tz(&EUROPE_LONDON), "2021-08-27 00:09:46+01:00");
 }
 
 fn of_date_ofday_ldn(date: &str, ofday: &str) -> Result<Time, TzError> {
