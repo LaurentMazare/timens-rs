@@ -9,6 +9,7 @@ use std::path::Path;
 
 use parse_zoneinfo::line::Line;
 use parse_zoneinfo::table::Table;
+use parse_zoneinfo::transitions::{FixedTimespan, TableTransitions};
 
 // This function is needed until zoneinfo_parse handles comments correctly.
 // Technically a '#' symbol could occur between double quotes and should be
@@ -40,7 +41,8 @@ fn convert_bad_chars(name: &str) -> String {
 fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<()> {
     let zones =
         table.zonesets.keys().chain(table.links.keys()).collect::<std::collections::BTreeSet<_>>();
-    writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]\n")?;
+    writeln!(f, "use crate::timezone::{{TzInfo, TzOffset}};\n\n")?;
+    writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]")?;
     writeln!(f, "pub enum Tz {{")?;
     for zone in &zones {
         writeln!(f, "    /// {}", zone)?;
@@ -68,6 +70,36 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     writeln!(f, "impl std::fmt::Display for Tz {{")?;
     writeln!(f, "    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {{")?;
     writeln!(f, "        f.write_str(self.name().as_ref())")?;
+    writeln!(f, "    }}")?;
+    writeln!(f, "}}\n")?;
+
+    writeln!(f, "impl Tz {{")?;
+    writeln!(f, "    pub fn tz_info(&self) -> TzInfo {{")?;
+    writeln!(f, "        match self {{")?;
+    for zone in &zones {
+        let zone_name = convert_bad_chars(zone);
+        let timespans = table.timespans(zone).unwrap();
+        writeln!(f, "            Self::{} => {{", zone_name)?;
+        writeln!(f, "                const TZ: TzInfo = TzInfo {{")?;
+        writeln!(
+            f,
+            "                    first: TzOffset {{ utc_offset: {}, dst_offset: {} }},",
+            timespans.first.utc_offset, timespans.first.dst_offset
+        )?;
+        writeln!(f, "                    rest: &[")?;
+        for (start, FixedTimespan { utc_offset, dst_offset, .. }) in timespans.rest {
+            writeln!(
+                f,
+                "                    ({}, TzOffset {{ utc_offset: {}, dst_offset: {} }}),",
+                start, utc_offset, dst_offset
+            )?;
+        }
+        writeln!(f, "                    ],")?;
+        writeln!(f, "                }};")?;
+        writeln!(f, "                TZ")?;
+        writeln!(f, "        }},")?;
+    }
+    writeln!(f, "        }}")?;
     writeln!(f, "    }}")?;
     writeln!(f, "}}\n")?;
 
