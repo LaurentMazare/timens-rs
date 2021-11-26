@@ -28,3 +28,6 @@ default = [ "binio", "sexp" ]
 [build-dependencies]
 parse-zoneinfo = "0.3"
 regex = "1.5.4"
+
+[dev-dependencies]
+anyhow = "1.0.48"

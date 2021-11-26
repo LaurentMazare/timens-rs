@@ -123,6 +123,13 @@ impl Rem<Span> for Time {
 impl Time {
     pub const EPOCH: Self = Self(0);
 
+    pub fn now() -> Self {
+        let now = std::time::SystemTime::now();
+        let dt = now.duration_since(std::time::UNIX_EPOCH).expect("system time before Unix epoch");
+        let dt = Span::of_int_sec(dt.as_secs() as i64) + Span::of_int_ns(dt.subsec_nanos() as i64);
+        Self::of_span_since_epoch(dt)
+    }
+
     pub fn to_span_since_epoch(self) -> Span {
         Span::of_int_ns(self.0)
     }
