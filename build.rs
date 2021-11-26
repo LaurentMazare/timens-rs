@@ -3,6 +3,7 @@
 // Chrono-TZ is dual-licensed under the MIT License and Apache 2.0 Licence.
 // Copyright (c) 2016 Djzin
 extern crate parse_zoneinfo;
+extern crate regex;
 
 use std::io::Write;
 use std::path::Path;
@@ -10,6 +11,8 @@ use std::path::Path;
 use parse_zoneinfo::line::Line;
 use parse_zoneinfo::table::Table;
 use parse_zoneinfo::transitions::{FixedTimespan, TableTransitions};
+
+const TIMENS_TZ_FILTER: &str = "TIMENS_TZ_FILTER";
 
 // This function is needed until zoneinfo_parse handles comments correctly.
 // Technically a '#' symbol could occur between double quotes and should be
@@ -38,9 +41,22 @@ fn convert_bad_chars(name: &str) -> String {
     }
 }
 
+fn re_filter() -> Option<regex::Regex> {
+    match std::env::var(TIMENS_TZ_FILTER) {
+        Ok(regex) => Some(regex::Regex::new(&regex).unwrap()),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(std::env::VarError::NotUnicode(_)) => panic!("invalid unicode in {}", TIMENS_TZ_FILTER),
+    }
+}
+
 fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<()> {
-    let zones =
-        table.zonesets.keys().chain(table.links.keys()).collect::<std::collections::BTreeSet<_>>();
+    let re = re_filter();
+    let zones = table
+        .zonesets
+        .keys()
+        .chain(table.links.keys())
+        .filter(move |&str| re.as_ref().map_or(true, |re| re.is_match(&*str)))
+        .collect::<std::collections::BTreeSet<_>>();
     writeln!(f, "use crate::timezone::{{TzInfo, TzOffset}};\n\n")?;
     writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]")?;
     writeln!(f, "pub enum Tz {{")?;
@@ -107,6 +123,8 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
 }
 
 fn main() {
+    println!("cargo:rerun-if-env-changed={}", TIMENS_TZ_FILTER);
+
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let parser = parse_zoneinfo::line::LineParser::new();
     let mut table = parse_zoneinfo::table::TableBuilder::new();
