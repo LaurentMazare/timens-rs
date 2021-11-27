@@ -1,6 +1,3 @@
-extern crate chrono;
-extern crate chrono_tz;
-
 mod date;
 pub use date::{Date, DateError, DayOfWeek, Month};
 
@@ -23,7 +20,13 @@ extern crate binprot_derive;
 #[cfg(feature = "binio")]
 use binprot_derive::{BinProtRead, BinProtWrite};
 
+#[cfg(feature = "with-chrono")]
+extern crate chrono;
+#[cfg(feature = "with-chrono")]
+extern crate chrono_tz;
+#[cfg(feature = "with-chrono")]
 use chrono::{TimeZone, Timelike};
+
 use std::ops::{Add, Rem, Sub};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -197,7 +200,10 @@ impl Time {
         self.write_tz(&mut s, tz).unwrap();
         s
     }
+}
 
+#[cfg(feature = "with-chrono")]
+impl Time {
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
         let day_ns = Span::DAY.to_int_ns();
         let sec = self.0.div_euclid(day_ns);
