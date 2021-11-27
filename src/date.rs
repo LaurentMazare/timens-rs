@@ -3,6 +3,7 @@ use std::ops::{Add, Sub};
 // Same representation as OCaml Core.Date.t, i.e.
 // 2 bytes year, 1 byte month, 1 byte day
 // https://github.com/janestreet/core_kernel/blob/4244b42cac7d1ba834c93bdeda2e29bc7ecfa9aa/core/src/date0.ml
+/// Represents a date.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Date(u32);
 
@@ -204,22 +205,27 @@ impl std::fmt::Display for DateError {
 impl std::error::Error for DateError {}
 
 impl Date {
+    /// The year for this date.
     pub fn year(self) -> u32 {
         self.0 >> 16
     }
 
+    /// The month for this date as an int, between 1 and 12.
     pub fn month_int(self) -> u8 {
         ((self.0 >> 8) & 255) as u8
     }
 
+    /// The month for this date.
     pub fn month(self) -> Month {
         Month::of_u8(self.month_int()).expect("not a proper month")
     }
 
+    /// The day of the month for this date, as an int between 1 and 31.
     pub fn day(self) -> u8 {
         (self.0 & 255) as u8
     }
 
+    /// Create a date based on a year, a month, and a day.
     pub const fn create(year: u32, month: Month, day: u8) -> Result<Self, DateError> {
         if year > 9999 {
             return Err(DateError::InvalidYear(year));
@@ -244,14 +250,17 @@ impl Date {
         Ok(Date((year << 16) | (month_as_int << 8) | day as u32))
     }
 
+    /// String representation for the current date, e.g. "2021-01-16".
     pub fn to_string_iso8601_extended(self) -> String {
         self.to_string()
     }
 
+    /// String representation for the current date, e.g. "20210116".
     pub fn to_string_iso8601_basic(self) -> String {
         format!("{:04}{:02}{:02}", self.year(), self.month_int(), self.day())
     }
 
+    /// String representation for the current date, e.g. "01/16/2021".
     pub fn to_string_american(self) -> String {
         format!("{:02}/{:02}/{:04}", self.month_int(), self.day(), self.year())
     }
@@ -264,6 +273,7 @@ impl Date {
         }
     };
 
+    /// Add a number of days to this date.
     pub fn add_days(self, n: i32) -> Self {
         self + n
     }
@@ -292,12 +302,16 @@ impl Date {
         }
     }
 
+    /// Add some number of years to a date.
+    /// If the returned day would not exist (e.g. Feb 28), the last day of the
+    /// target month is returned.
     pub fn add_years(self, y: i32) -> Self {
         self.add_months(y * 12)
     }
 
     const DAYOFWEEK_TABLE: [i32; 12] = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
 
+    /// The day of the week for this date.
     pub fn day_of_week(self) -> DayOfWeek {
         let m = self.month_int();
         let y = if m < 3 { self.year() - 1 } else { self.year() };
@@ -310,8 +324,14 @@ impl Date {
         DayOfWeek::of_u8(d as u8).unwrap()
     }
 
+    /// The number of days since epoch (1970-01-01).
     pub fn of_days_since_epoch(d: i32) -> Self {
         Self::UNIX_EPOCH + d
+    }
+
+    /// The current date in the given timezone, this calls Time::now.
+    pub fn today(tz: crate::Tz) -> Self {
+        crate::Time::now().to_date(tz)
     }
 }
 
