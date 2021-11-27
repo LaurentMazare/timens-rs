@@ -32,6 +32,7 @@ fn add_months() {
     let d = Date::from_str("2020-01-31").unwrap();
     assert_eq!(d.to_string(), "2020-01-31");
     assert_eq!(d.day_of_week(), DayOfWeek::Fri);
+    assert_eq!(timens::Days::of_date(d).day_of_week(), DayOfWeek::Fri);
     assert_eq!(d.add_months(0).to_string(), "2020-01-31");
     assert_eq!(d.add_months(1).to_string(), "2020-02-29");
     assert_eq!(d.add_months(13).to_string(), "2021-02-28");
@@ -40,6 +41,29 @@ fn add_months() {
     assert_eq!(d.add_months(-1).to_string(), "2019-12-31");
     assert_eq!(d.add_months(-2).to_string(), "2019-11-30");
     assert_eq!(d.add_months(-20).to_string(), "2018-05-31");
+}
+
+#[test]
+fn iter() {
+    let lo = Date::from_str("2021-01-14").unwrap();
+    let up = Date::from_str("2021-01-20").unwrap();
+    assert_eq!(lo.day_of_week(), DayOfWeek::Thu);
+    assert_eq!(timens::Days::of_date(lo).day_of_week(), DayOfWeek::Thu);
+    let dates: Vec<_> = lo.dates_until(up).collect();
+    assert_eq!(
+        format!("{:?}", dates),
+        "[2021-01-14, 2021-01-15, 2021-01-16, 2021-01-17, 2021-01-18, 2021-01-19, 2021-01-20]"
+    );
+    let dates: Vec<_> = lo.weekdays_until(up).collect();
+    assert_eq!(
+        format!("{:?}", dates),
+        "[2021-01-14, 2021-01-15, 2021-01-18, 2021-01-19, 2021-01-20]"
+    );
+    for diff in [0, 1, 2, 7, 12, 23, 125, 365] {
+        let up = lo + diff;
+        let dates: Vec<_> = lo.dates_until(up).collect();
+        assert_eq!(dates.len(), diff as usize + 1)
+    }
 }
 
 #[cfg(feature = "binio")]

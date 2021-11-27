@@ -4,7 +4,7 @@ use std::ops::{Add, Sub};
 // 2 bytes year, 1 byte month, 1 byte day
 // https://github.com/janestreet/core_kernel/blob/4244b42cac7d1ba834c93bdeda2e29bc7ecfa9aa/core/src/date0.ml
 /// Represents a date.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Date(u32);
 
 #[cfg(feature = "binio")]
@@ -111,6 +111,17 @@ impl DayOfWeek {
             Self::Sat => 6,
         }
     }
+
+    pub fn is_weekday(self) -> bool {
+        match self {
+            Self::Mon | Self::Tue | Self::Wed | Self::Thu | Self::Fri => true,
+            Self::Sat | Self::Sun => false,
+        }
+    }
+
+    pub fn is_weekend(self) -> bool {
+        !self.is_weekday()
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -181,9 +192,15 @@ impl Month {
     }
 }
 
-impl std::fmt::Display for Date {
+impl std::fmt::Debug for Date {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:04}-{:02}-{:02}", self.year(), self.month_int(), self.day())
+    }
+}
+
+impl std::fmt::Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
     }
 }
 
@@ -333,9 +350,17 @@ impl Date {
     pub fn today(tz: crate::Tz) -> Self {
         crate::Time::now().to_date(tz)
     }
+
+    pub fn is_weekday(self) -> bool {
+        self.day_of_week().is_weekday()
+    }
+
+    pub fn is_weekend(self) -> bool {
+        self.day_of_week().is_weekend()
+    }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Days(i32);
 
 impl Days {
@@ -363,6 +388,33 @@ impl Days {
         let m = ((mi + 2) % 12) + 1;
         let d = ddd - (((mi * 306) + 5) / 10) + 1;
         Date::create(y as u32, Month::of_u8(m as u8).unwrap(), d as u8)
+    }
+
+    pub fn day_of_week(self) -> DayOfWeek {
+        DayOfWeek::of_u8(((self.0 + 3) % 7) as u8).unwrap()
+    }
+
+    pub fn is_weekday(self) -> bool {
+        self.day_of_week().is_weekday()
+    }
+
+    pub fn is_weekend(self) -> bool {
+        self.day_of_week().is_weekend()
+    }
+}
+
+impl std::fmt::Debug for Days {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.to_date() {
+            Ok(date) => std::fmt::Debug::fmt(&date, f),
+            Err(err) => std::fmt::Debug::fmt(&err, f),
+        }
+    }
+}
+
+impl std::fmt::Display for Days {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
     }
 }
 
@@ -438,5 +490,65 @@ impl Sub for Date {
 
     fn sub(self, other: Self) -> Self::Output {
         Days::of_date(self) - Days::of_date(other)
+    }
+}
+
+pub struct DatesBetween {
+    current_day: Days,
+    last_day: Days,
+}
+
+impl Iterator for DatesBetween {
+    type Item = Date;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_day <= self.last_day {
+            let res = self.current_day.to_date().unwrap();
+            self.current_day = self.current_day + 1;
+            Some(res)
+        } else {
+            None
+        }
+    }
+}
+
+impl Date {
+    /// List all the dates between two dates (inclusive).
+    pub fn dates_between(lo: Self, up: Self) -> DatesBetween {
+        DatesBetween { current_day: Days::of_date(lo), last_day: Days::of_date(up) }
+    }
+
+    pub fn dates_until(self, up: Self) -> DatesBetween {
+        Self::dates_between(self, up)
+    }
+}
+
+pub struct WeekdaysBetween {
+    current_day: Days,
+    last_day: Days,
+}
+
+impl Iterator for WeekdaysBetween {
+    type Item = Date;
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_day <= self.last_day {
+            if self.current_day.is_weekday() {
+                let res = self.current_day.to_date().unwrap();
+                self.current_day = self.current_day + 1;
+                return Some(res);
+            }
+            self.current_day = self.current_day + 1;
+        }
+        None
+    }
+}
+
+impl Date {
+    /// List all the weekdays between two dates (inclusive).
+    pub fn weekdays_between(lo: Self, up: Self) -> WeekdaysBetween {
+        WeekdaysBetween { current_day: Days::of_date(lo), last_day: Days::of_date(up) }
+    }
+
+    pub fn weekdays_until(self, up: Self) -> WeekdaysBetween {
+        Self::weekdays_between(self, up)
     }
 }
