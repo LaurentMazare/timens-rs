@@ -44,6 +44,30 @@ fn add_months() {
 }
 
 #[test]
+fn create() {
+    let mut tested_dates = 0;
+    for y in [2014, 9999, 2000, 2020] {
+        for m in 1..=12 {
+            for d in 1..=31 {
+                let month = Month::of_u8(m).unwrap();
+                assert_eq!(month.to_u8(), m);
+                if d > month.days_in_month(y) {
+                    continue;
+                }
+                let date = Date::create(y, month, d).unwrap();
+                assert_eq!(date.year(), y);
+                assert_eq!(date.month(), month);
+                assert_eq!(date.day(), d);
+                let date2 = Date::from_str(&date.to_string()).unwrap();
+                assert_eq!(date, date2);
+                tested_dates += 1;
+            }
+        }
+    }
+    assert_eq!(tested_dates, 4 * 365 + 2);
+}
+
+#[test]
 fn iter() {
     let lo = Date::from_str("2021-01-14").unwrap();
     let up = Date::from_str("2021-01-20").unwrap();
@@ -73,7 +97,27 @@ fn binio_roundtrip() {
     let mut bytes: Vec<u8> = vec![];
     binprot::BinProtWrite::binprot_write(&d, &mut bytes).unwrap();
     let rt: Date = binprot::BinProtRead::binprot_read(&mut bytes.as_slice()).unwrap();
-    assert_eq!(d, rt)
+    assert_eq!(d, rt);
+    // Serialization test using sample values from:
+    // https://github.com/janestreet/core_kernel/blob/b61f11a1c168845ee0b62b57591d6c809c7cdc71/core/test/src/test_date.ml#L28
+    let d = Date::create(1066, Month::Oct, 16).unwrap();
+    bytes.clear();
+    binprot::BinProtWrite::binprot_write(&d, &mut bytes).unwrap();
+    assert_eq!(bytes, [254, 42, 4, 9, 16]);
+    let rt: Date = binprot::BinProtRead::binprot_read(&mut bytes.as_slice()).unwrap();
+    assert_eq!(d, rt);
+    let d = Date::create(1955, Month::Nov, 5).unwrap();
+    bytes.clear();
+    binprot::BinProtWrite::binprot_write(&d, &mut bytes).unwrap();
+    assert_eq!(bytes, [254, 163, 7, 10, 5]);
+    let rt: Date = binprot::BinProtRead::binprot_read(&mut bytes.as_slice()).unwrap();
+    assert_eq!(d, rt);
+    let d = Date::create(2012, Month::Apr, 19).unwrap();
+    bytes.clear();
+    binprot::BinProtWrite::binprot_write(&d, &mut bytes).unwrap();
+    assert_eq!(bytes, [254, 220, 7, 3, 19]);
+    let rt: Date = binprot::BinProtRead::binprot_read(&mut bytes.as_slice()).unwrap();
+    assert_eq!(d, rt);
 }
 
 #[cfg(feature = "sexp")]
