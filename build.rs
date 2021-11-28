@@ -55,7 +55,11 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
         .zonesets
         .keys()
         .chain(table.links.keys())
-        .filter(move |&str| re.as_ref().map_or(true, |re| re.is_match(&*str)))
+        .filter(move |&str| match &str[..] {
+            // Always include the following zones.
+            "GMT" | "UTC" | "Europe/London" | "America/New_York" | "Asia/Hong_Kong" => true,
+            _ => re.as_ref().map_or(true, |re| re.is_match(&*str)),
+        })
         .collect::<std::collections::BTreeSet<_>>();
     writeln!(f, "use crate::timezone::{{TzInfo, TzOffset, TzParseError}};\n\n")?;
     writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]")?;
