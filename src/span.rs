@@ -1,4 +1,6 @@
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite))]
@@ -179,48 +181,48 @@ impl std::str::FromStr for Span {
                     false
                 }
                 'd' => {
-                    res = res + Span::DAY * value;
+                    res += Span::DAY * value;
                     if frac_value != 0 {
-                        res = res + Span((Span::DAY.0 * frac_value) / frac_digits)
+                        res += (Span::DAY * frac_value) / frac_digits
                     }
                     true
                 }
                 'h' => {
-                    res = res + Span::HR * value;
+                    res += Span::HR * value;
                     if frac_value != 0 {
-                        res = res + Span((Span::HR.0 * frac_value) / frac_digits)
+                        res += (Span::HR * frac_value) / frac_digits
                     }
                     true
                 }
                 'm' => {
                     match chars.next_if_eq(&'s') {
                         Some(_) => {
-                            res = res + Span::MS * value;
+                            res += Span::MS * value;
                             if frac_value != 0 {
-                                res = res + Span((Span::MS.0 * frac_value) / frac_digits)
+                                res += (Span::MS * frac_value) / frac_digits
                             }
                         }
                         None => {
-                            res = res + Span::MIN * value;
+                            res += Span::MIN * value;
                             if frac_value != 0 {
-                                res = res + Span((Span::MIN.0 * frac_value) / frac_digits)
+                                res += (Span::MIN * frac_value) / frac_digits
                             }
                         }
                     }
                     true
                 }
                 's' => {
-                    res = res + Span::SEC * value;
+                    res += Span::SEC * value;
                     if frac_value != 0 {
-                        res = res + Span((Span::SEC.0 * frac_value) / frac_digits)
+                        res += (Span::SEC * frac_value) / frac_digits
                     }
                     true
                 }
                 'u' => match chars.next_if_eq(&'s') {
                     Some(_) => {
-                        res = res + Span::US * value;
+                        res += Span::US * value;
                         if frac_value != 0 {
-                            res = res + Span((Span::US.0 * frac_value) / frac_digits)
+                            res += (Span::US * frac_value) / frac_digits
                         }
                         true
                     }
@@ -228,9 +230,9 @@ impl std::str::FromStr for Span {
                 },
                 'n' => match chars.next_if_eq(&'s') {
                     Some(_) => {
-                        res = res + Span::NS * value;
+                        res += Span::NS * value;
                         if frac_value * 2 > frac_digits {
-                            res = res + Span::NS;
+                            res += Span::NS;
                         }
                         true
                     }
@@ -271,6 +273,12 @@ impl Add for Span {
     }
 }
 
+impl AddAssign for Span {
+    fn add_assign(&mut self, other: Self) {
+        self.0 += other.0
+    }
+}
+
 impl Neg for Span {
     type Output = Self;
 
@@ -284,6 +292,12 @@ impl Sub for Span {
 
     fn sub(self, other: Self) -> Self {
         Self(self.0 - other.0)
+    }
+}
+
+impl SubAssign for Span {
+    fn sub_assign(&mut self, other: Self) {
+        self.0 -= other.0
     }
 }
 
@@ -303,11 +317,29 @@ impl Mul<f64> for Span {
     }
 }
 
+impl MulAssign<i64> for Span {
+    fn mul_assign(&mut self, other: i64) {
+        *self = *self * other
+    }
+}
+
+impl MulAssign<f64> for Span {
+    fn mul_assign(&mut self, other: f64) {
+        *self = *self * other
+    }
+}
+
 impl Rem for Span {
     type Output = Self;
 
     fn rem(self, other: Self) -> Self {
         Self(self.0 % other.0)
+    }
+}
+
+impl RemAssign for Span {
+    fn rem_assign(&mut self, other: Self) {
+        self.0 %= other.0
     }
 }
 
@@ -332,5 +364,17 @@ impl Div<f64> for Span {
 
     fn div(self, other: f64) -> Self {
         Self((self.0 as f64 / other) as i64)
+    }
+}
+
+impl DivAssign<i64> for Span {
+    fn div_assign(&mut self, other: i64) {
+        *self = *self / other
+    }
+}
+
+impl DivAssign<f64> for Span {
+    fn div_assign(&mut self, other: f64) {
+        *self = *self / other
     }
 }

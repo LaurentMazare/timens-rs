@@ -27,7 +27,7 @@ extern crate chrono_tz;
 #[cfg(feature = "with-chrono")]
 use chrono::{TimeZone, Timelike};
 
-use std::ops::{Add, Rem, Sub};
+use std::ops::{Add, AddAssign, Rem, Sub, SubAssign};
 use std::str::FromStr;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -158,11 +158,23 @@ impl Add<Span> for Time {
     }
 }
 
+impl AddAssign<Span> for Time {
+    fn add_assign(&mut self, other: Span) {
+        self.0 += other.to_int_ns()
+    }
+}
+
 impl Sub<Span> for Time {
     type Output = Self;
 
     fn sub(self, other: Span) -> Self {
         Self(self.0 - other.to_int_ns())
+    }
+}
+
+impl SubAssign<Span> for Time {
+    fn sub_assign(&mut self, other: Span) {
+        self.0 -= other.to_int_ns()
     }
 }
 
@@ -175,10 +187,10 @@ impl Sub for Time {
 }
 
 impl Rem<Span> for Time {
-    type Output = Self;
+    type Output = Span;
 
-    fn rem(self, other: Span) -> Self {
-        Self(self.0 % other.to_int_ns())
+    fn rem(self, other: Span) -> Span {
+        Span::of_int_ns(self.0 % other.to_int_ns())
     }
 }
 
@@ -200,6 +212,14 @@ impl Time {
         Self(span.to_int_ns())
     }
 
+    pub fn to_int_ns_since_epoch(self) -> i64 {
+        self.0
+    }
+
+    pub fn of_int_ns_since_epoch(ns: i64) -> Self {
+        Self(ns)
+    }
+
     pub fn to_date_ofday(self, tz: Tz) -> (Date, OfDay) {
         let offset = tz.tz_info().offset(self);
         let ns_since_epoch = self.0 + offset.to_int_ns();
@@ -215,6 +235,13 @@ impl Time {
         let ns_since_epoch = self.0 + offset.to_int_ns();
         let days = ns_since_epoch.div_euclid(Span::DAY.to_int_ns());
         Date::of_days_since_epoch(days as i32)
+    }
+
+    pub fn to_ofday(self, tz: Tz) -> OfDay {
+        let offset = tz.tz_info().offset(self);
+        let ns_since_epoch = self.0 + offset.to_int_ns();
+        let ofday = ns_since_epoch.rem_euclid(Span::DAY.to_int_ns());
+        OfDay::of_ns_since_midnight(ofday)
     }
 
     pub fn of_date_ofday(date: Date, ofday: OfDay, tz: Tz) -> Result<Self, TzError> {

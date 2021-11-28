@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 // Same representation as OCaml Core.Date.t, i.e.
 // 2 bytes year, 1 byte month, 1 byte day
@@ -451,11 +451,23 @@ impl Add<i32> for Days {
     }
 }
 
+impl AddAssign<i32> for Days {
+    fn add_assign(&mut self, other: i32) {
+        self.0 += other
+    }
+}
+
 impl Sub<i32> for Days {
     type Output = Days;
 
     fn sub(self, other: i32) -> Self::Output {
         Self(self.0 - other)
+    }
+}
+
+impl SubAssign<i32> for Days {
+    fn sub_assign(&mut self, other: i32) {
+        self.0 -= other
     }
 }
 
@@ -476,12 +488,24 @@ impl Add<i32> for Date {
     }
 }
 
+impl AddAssign<i32> for Date {
+    fn add_assign(&mut self, other: i32) {
+        *self = *self + other
+    }
+}
+
 impl Sub<i32> for Date {
     type Output = Date;
 
     fn sub(self, other: i32) -> Self::Output {
         let days = Days::of_date(self);
         (days - other).to_date().unwrap()
+    }
+}
+
+impl SubAssign<i32> for Date {
+    fn sub_assign(&mut self, other: i32) {
+        *self = *self - other
     }
 }
 
@@ -503,7 +527,7 @@ impl Iterator for DatesBetween {
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_day <= self.last_day {
             let res = self.current_day.to_date().unwrap();
-            self.current_day = self.current_day + 1;
+            self.current_day += 1;
             Some(res)
         } else {
             None
@@ -533,10 +557,10 @@ impl Iterator for WeekdaysBetween {
         while self.current_day <= self.last_day {
             if self.current_day.is_weekday() {
                 let res = self.current_day.to_date().unwrap();
-                self.current_day = self.current_day + 1;
+                self.current_day += 1;
                 return Some(res);
             }
-            self.current_day = self.current_day + 1;
+            self.current_day += 1;
         }
         None
     }
