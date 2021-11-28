@@ -125,6 +125,7 @@ fn binio_roundtrip() {
 fn sexp_roundtrip() {
     let d = Date::from_str("1991-01-16").unwrap();
     let sexp = rsexp::SexpOf::sexp_of(&d);
+    assert_eq!(sexp, rsexp::Sexp::Atom("1991-01-16".as_bytes().to_owned()));
     let rt: Date = rsexp::OfSexp::of_sexp(&sexp).unwrap();
     assert_eq!(d, rt)
 }

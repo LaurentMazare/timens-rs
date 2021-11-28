@@ -378,3 +378,6 @@ impl DivAssign<f64> for Span {
         *self = *self / other
     }
 }
+
+#[cfg(feature = "sexp")]
+impl rsexp::UseToString for Span {}

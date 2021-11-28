@@ -164,32 +164,4 @@ impl std::str::FromStr for OfDay {
 }
 
 #[cfg(feature = "sexp")]
-mod sexp {
-    use std::str::FromStr;
-    impl rsexp::SexpOf for crate::OfDay {
-        fn sexp_of(&self) -> rsexp::Sexp {
-            rsexp::SexpOf::sexp_of(&self.to_string())
-        }
-    }
-
-    impl rsexp::OfSexp for crate::OfDay {
-        fn of_sexp(sexp: &rsexp::Sexp) -> Result<Self, rsexp::IntoSexpError> {
-            match sexp {
-                rsexp::Sexp::Atom(a) => {
-                    crate::OfDay::from_str(std::str::from_utf8(a).map_err(|err| {
-                        let err = format!("{}", err);
-                        rsexp::IntoSexpError::StringConversionError { err }
-                    })?)
-                    .map_err(|err| {
-                        let err = format!("{}", err);
-                        rsexp::IntoSexpError::StringConversionError { err }
-                    })
-                }
-                rsexp::Sexp::List(list) => Err(rsexp::IntoSexpError::ExpectedAtomGotList {
-                    type_: "ofday",
-                    list_len: list.len(),
-                }),
-            }
-        }
-    }
-}
+impl rsexp::UseToString for OfDay {}

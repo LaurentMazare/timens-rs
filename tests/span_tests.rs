@@ -45,3 +45,15 @@ fn to_string() {
     // Some weird formatting
     assert_eq!("1.d0s.0s.1d".parse::<Span>().unwrap(), Span::DAY + Span::MIN * 144);
 }
+
+#[cfg(feature = "sexp")]
+#[test]
+fn sexp_roundtrip() {
+    for span in ["0s", "1us", "10m", "12m123.001us", "-12d1ns"] {
+        let d: Span = span.parse().unwrap();
+        let sexp = rsexp::SexpOf::sexp_of(&d);
+        assert_eq!(sexp, rsexp::Sexp::Atom(span.as_bytes().to_owned()));
+        let rt: Span = rsexp::OfSexp::of_sexp(&sexp).unwrap();
+        assert_eq!(d, rt)
+    }
+}

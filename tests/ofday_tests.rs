@@ -20,3 +20,13 @@ fn to_string() {
     test_str(12, 34, 56, 789101100, "12:34:56.7891011");
     test_str(23, 59, 59, 999999999, "23:59:59.999999999");
 }
+
+#[cfg(feature = "sexp")]
+#[test]
+fn sexp_roundtrip() {
+    let d: OfDay = "13:37".parse().unwrap();
+    let sexp = rsexp::SexpOf::sexp_of(&d);
+    assert_eq!(sexp, rsexp::Sexp::Atom("13:37:00".as_bytes().to_owned()));
+    let rt: OfDay = rsexp::OfSexp::of_sexp(&sexp).unwrap();
+    assert_eq!(d, rt)
+}
