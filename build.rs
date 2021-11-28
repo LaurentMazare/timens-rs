@@ -12,6 +12,8 @@ use parse_zoneinfo::line::Line;
 use parse_zoneinfo::table::Table;
 use parse_zoneinfo::transitions::{FixedTimespan, TableTransitions};
 
+// If set, use this environment variable to select additional time zones. When not
+// set, only the default time zones are selected.
 const TIMENS_TZ_FILTER: &str = "TIMENS_TZ_FILTER";
 
 // This function is needed until zoneinfo_parse handles comments correctly.
@@ -58,7 +60,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
         .filter(move |&str| match &str[..] {
             // Always include the following zones.
             "GMT" | "UTC" | "Europe/London" | "America/New_York" | "Asia/Hong_Kong" => true,
-            _ => re.as_ref().map_or(true, |re| re.is_match(&*str)),
+            _ => re.as_ref().map_or(false, |re| re.is_match(&*str)),
         })
         .collect::<std::collections::BTreeSet<_>>();
     writeln!(f, "use crate::timezone::{{TzInfo, TzOffset, TzParseError}};\n\n")?;
