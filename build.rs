@@ -57,7 +57,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
         .chain(table.links.keys())
         .filter(move |&str| re.as_ref().map_or(true, |re| re.is_match(&*str)))
         .collect::<std::collections::BTreeSet<_>>();
-    writeln!(f, "use crate::timezone::{{TzInfo, TzOffset}};\n\n")?;
+    writeln!(f, "use crate::timezone::{{TzInfo, TzOffset, TzParseError}};\n\n")?;
     writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]")?;
     writeln!(f, "pub enum Tz {{")?;
     for zone in &zones {
@@ -86,6 +86,19 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     writeln!(f, "impl std::fmt::Display for Tz {{")?;
     writeln!(f, "    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {{")?;
     writeln!(f, "        f.write_str(self.name().as_ref())")?;
+    writeln!(f, "    }}")?;
+    writeln!(f, "}}\n")?;
+
+    writeln!(f, "impl std::str::FromStr for Tz {{")?;
+    writeln!(f, "    type Err = TzParseError;")?;
+    writeln!(f, "    fn from_str(s: &str) -> Result<Self, Self::Err> {{")?;
+    writeln!(f, "        match s {{")?;
+    for zone in &zones {
+        let zone_name = convert_bad_chars(zone);
+        writeln!(f, "            \"{}\" => Ok(Tz::{}),", zone, zone_name)?;
+    }
+    writeln!(f, "            _ => Err(TzParseError::UnknownZone(s.to_string())),")?;
+    writeln!(f, "        }}")?;
     writeln!(f, "    }}")?;
     writeln!(f, "}}\n")?;
 

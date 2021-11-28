@@ -35,6 +35,19 @@ impl std::fmt::Display for TzError {
 
 impl std::error::Error for TzError {}
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TzParseError {
+    UnknownZone(String),
+}
+
+impl std::fmt::Display for TzParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for TzParseError {}
+
 impl TzInfo {
     pub fn find(&self, time: Time) -> &TzOffset {
         let sec = time.0.div_euclid(Span::SEC.to_int_ns());

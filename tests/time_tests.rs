@@ -34,4 +34,10 @@ fn from_str() {
     assert_eq!(time2, time - Span::HR * 7 - Span::MIN * 30);
     let time2 = Time::from_str("2020-01-16 11:22:33.456-07:30:59").unwrap();
     assert_eq!(time2, time - Span::HR * 7 - Span::MIN * 30 - Span::SEC * 59);
+    let time2 = Time::from_str("2020-01-16 11:22:33.456 America/New_York").unwrap();
+    assert_eq!(time2, time + Span::HR * 5);
+    assert_eq!(
+        Time::from_str("2020-01-16 23:22:33 America/New_York").unwrap(),
+        Time::from_str("2020-01-17 04:22:33 GMT").unwrap(),
+    );
 }

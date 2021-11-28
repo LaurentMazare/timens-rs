@@ -2,7 +2,7 @@ mod date;
 pub use date::*;
 
 mod timezone;
-pub use timezone::{TzError, TzInfo, TzOffset};
+pub use timezone::{TzError, TzInfo, TzOffset, TzParseError};
 
 mod span;
 pub use span::Span;
@@ -51,6 +51,8 @@ pub enum TimeParseError {
     OfDayError(ofday::ParseOfDayError),
     NoZone,
     ExpectedIntInZone(std::num::ParseIntError),
+    TzError(TzError),
+    TzParseError(TzParseError),
 }
 
 impl std::fmt::Display for TimeParseError {
@@ -60,6 +62,18 @@ impl std::fmt::Display for TimeParseError {
 }
 
 impl std::error::Error for TimeParseError {}
+
+impl std::convert::From<TzError> for TimeParseError {
+    fn from(tz_error: TzError) -> Self {
+        TimeParseError::TzError(tz_error)
+    }
+}
+
+impl std::convert::From<TzParseError> for TimeParseError {
+    fn from(tz_error: TzParseError) -> Self {
+        TimeParseError::TzParseError(tz_error)
+    }
+}
 
 impl std::convert::From<std::num::ParseIntError> for TimeParseError {
     fn from(int_error: std::num::ParseIntError) -> Self {
@@ -124,6 +138,11 @@ impl std::str::FromStr for Time {
                     let ofday = OfDay::from_str(ofday)?;
                     let zone_offset = parse_zone_offset(zone_offset)?;
                     return Ok(Self::of_date_ofday_gmt(date, ofday) - zone_offset);
+                }
+                if let Some((ofday, tz)) = ofday_with_zone.split_once(' ') {
+                    let ofday = OfDay::from_str(ofday)?;
+                    let tz = Tz::from_str(tz)?;
+                    return Ok(Self::of_date_ofday(date, ofday, tz)?);
                 }
                 Err(TimeParseError::NoZone)
             }
