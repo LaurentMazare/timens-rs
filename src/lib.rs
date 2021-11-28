@@ -36,11 +36,8 @@ pub struct Time(i64);
 
 impl std::fmt::Debug for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        let day_ns = Span::DAY.to_int_ns();
-        let days = self.0.div_euclid(day_ns);
-        let ofday = self.0.rem_euclid(day_ns);
-        let date = Date::of_days_since_epoch(days as i32);
-        write!(f, "{} {}Z", date, OfDay::of_ns_since_midnight(ofday))
+        let (date, ofday) = self.to_date_ofday_gmt();
+        write!(f, "{} {}Z", date, ofday)
     }
 }
 
@@ -115,6 +112,34 @@ fn parse_zone_offset(s: &str) -> Result<Span, TimeParseError> {
     }
 }
 
+impl Time {
+    fn parse_ofday_with_zone(ofday_with_zone: &str, date: Date) -> Result<Self, TimeParseError> {
+        match ofday_with_zone.split_once('Z') {
+            Some((ofday, z)) if z.is_empty() => {
+                let ofday = OfDay::from_str(ofday)?;
+                return Ok(Self::of_date_ofday_gmt(date, ofday));
+            }
+            Some(_) | None => (),
+        };
+        if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('+') {
+            let ofday = OfDay::from_str(ofday)?;
+            let zone_offset = parse_zone_offset(zone_offset)?;
+            return Ok(Self::of_date_ofday_gmt(date, ofday) + zone_offset);
+        }
+        if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('-') {
+            let ofday = OfDay::from_str(ofday)?;
+            let zone_offset = parse_zone_offset(zone_offset)?;
+            return Ok(Self::of_date_ofday_gmt(date, ofday) - zone_offset);
+        }
+        if let Some((ofday, tz)) = ofday_with_zone.split_once(' ') {
+            let ofday = OfDay::from_str(ofday)?;
+            let tz = Tz::from_str(tz)?;
+            return Ok(Self::of_date_ofday(date, ofday, tz)?);
+        }
+        Err(TimeParseError::NoZone)
+    }
+}
+
 impl std::str::FromStr for Time {
     type Err = TimeParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -122,29 +147,7 @@ impl std::str::FromStr for Time {
             None => Err(TimeParseError::NoSpace),
             Some((date, ofday_with_zone)) => {
                 let date = Date::from_str(date)?;
-                match ofday_with_zone.split_once('Z') {
-                    Some((ofday, z)) if z.is_empty() => {
-                        let ofday = OfDay::from_str(ofday)?;
-                        return Ok(Self::of_date_ofday_gmt(date, ofday));
-                    }
-                    Some(_) | None => (),
-                };
-                if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('+') {
-                    let ofday = OfDay::from_str(ofday)?;
-                    let zone_offset = parse_zone_offset(zone_offset)?;
-                    return Ok(Self::of_date_ofday_gmt(date, ofday) + zone_offset);
-                }
-                if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('-') {
-                    let ofday = OfDay::from_str(ofday)?;
-                    let zone_offset = parse_zone_offset(zone_offset)?;
-                    return Ok(Self::of_date_ofday_gmt(date, ofday) - zone_offset);
-                }
-                if let Some((ofday, tz)) = ofday_with_zone.split_once(' ') {
-                    let ofday = OfDay::from_str(ofday)?;
-                    let tz = Tz::from_str(tz)?;
-                    return Ok(Self::of_date_ofday(date, ofday, tz)?);
-                }
-                Err(TimeParseError::NoZone)
+                Self::parse_ofday_with_zone(ofday_with_zone, date)
             }
         }
     }
@@ -226,6 +229,14 @@ impl Time {
         let day_ns = Span::DAY.to_int_ns();
         let days = ns_since_epoch.div_euclid(day_ns);
         let ofday = ns_since_epoch.rem_euclid(day_ns);
+        let date = Date::of_days_since_epoch(days as i32);
+        (date, OfDay::of_ns_since_midnight(ofday))
+    }
+
+    pub fn to_date_ofday_gmt(self) -> (Date, OfDay) {
+        let day_ns = Span::DAY.to_int_ns();
+        let days = self.0.div_euclid(day_ns);
+        let ofday = self.0.rem_euclid(day_ns);
         let date = Date::of_days_since_epoch(days as i32);
         (date, OfDay::of_ns_since_midnight(ofday))
     }
@@ -331,6 +342,48 @@ impl Time {
                         ns_width = ns_width
                     )
                 }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "sexp")]
+mod sexp {
+    use rsexp::Sexp;
+    impl rsexp::SexpOf for crate::Time {
+        fn sexp_of(&self) -> Sexp {
+            let (date, ofday) = self.to_date_ofday_gmt();
+            let ofday = format!("{}Z", ofday);
+            rsexp::SexpOf::sexp_of(&(date.to_string(), ofday))
+        }
+    }
+
+    impl rsexp::OfSexp for crate::Time {
+        fn of_sexp(sexp: &Sexp) -> Result<Self, rsexp::IntoSexpError> {
+            match sexp {
+                Sexp::List(ref list) => match list[..] {
+                    [Sexp::Atom(ref date), Sexp::Atom(ref ofday_with_zone)] => {
+                        let date: crate::Date = String::from_utf8_lossy(date).parse().map_err(
+                            |err: crate::DateError| rsexp::IntoSexpError::StringConversionError {
+                                err: err.to_string(),
+                            },
+                        )?;
+                        let time = Self::parse_ofday_with_zone(
+                            &String::from_utf8_lossy(ofday_with_zone),
+                            date,
+                        )
+                        .map_err(|err| {
+                            rsexp::IntoSexpError::StringConversionError { err: err.to_string() }
+                        })?;
+                        Ok(time)
+                    }
+                    _ => Err(rsexp::IntoSexpError::ListLengthMismatch {
+                        type_: "time",
+                        list_len: list.len(),
+                        expected_len: 2,
+                    }),
+                },
+                Sexp::Atom(_) => Err(rsexp::IntoSexpError::ExpectedListGotAtom { type_: "time" }),
             }
         }
     }

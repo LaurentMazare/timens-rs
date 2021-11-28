@@ -41,3 +41,13 @@ fn from_str() {
         Time::from_str("2020-01-17 04:22:33 GMT").unwrap(),
     );
 }
+
+#[cfg(feature = "sexp")]
+#[test]
+fn sexp_roundtrip() {
+    let d: Time = "2020-07-16 15:15:45 Europe/London".parse().unwrap();
+    let sexp = rsexp::SexpOf::sexp_of(&d);
+    assert_eq!(sexp.to_string(), "(2020-07-16 14:15:45Z)");
+    let rt: Time = rsexp::OfSexp::of_sexp(&sexp).unwrap();
+    assert_eq!(d, rt)
+}
