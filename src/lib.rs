@@ -28,6 +28,7 @@ extern crate chrono_tz;
 use chrono::{TimeZone, Timelike};
 
 use std::ops::{Add, Rem, Sub};
+use std::str::FromStr;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
@@ -49,6 +50,7 @@ pub enum TimeParseError {
     DateError(date::DateError),
     OfDayError(ofday::ParseOfDayError),
     NoZone,
+    ExpectedIntInZone(std::num::ParseIntError),
 }
 
 impl std::fmt::Display for TimeParseError {
@@ -58,6 +60,12 @@ impl std::fmt::Display for TimeParseError {
 }
 
 impl std::error::Error for TimeParseError {}
+
+impl std::convert::From<std::num::ParseIntError> for TimeParseError {
+    fn from(int_error: std::num::ParseIntError) -> Self {
+        TimeParseError::ExpectedIntInZone(int_error)
+    }
+}
 
 impl std::convert::From<date::DateError> for TimeParseError {
     fn from(date_error: date::DateError) -> Self {
@@ -71,6 +79,28 @@ impl std::convert::From<ofday::ParseOfDayError> for TimeParseError {
     }
 }
 
+fn parse_zone_offset(s: &str) -> Result<Span, TimeParseError> {
+    match s.split(':').collect::<Vec<_>>()[..] {
+        [] => Err(TimeParseError::NoZone),
+        [hour] => {
+            let hour = u8::from_str(hour)? as i64;
+            Ok(Span::HR * hour)
+        }
+        [hour, minute] => {
+            let hour = u8::from_str(hour)? as i64;
+            let minute = u8::from_str(minute)? as i64;
+            Ok(Span::HR * hour + Span::MIN * minute)
+        }
+        [hour, minute, second] => {
+            let hour = u8::from_str(hour)? as i64;
+            let minute = u8::from_str(minute)? as i64;
+            let second = u8::from_str(second)? as i64;
+            Ok(Span::HR * hour + Span::MIN * minute + Span::SEC * second)
+        }
+        _ => Err(TimeParseError::NoZone),
+    }
+}
+
 impl std::str::FromStr for Time {
     type Err = TimeParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -78,14 +108,24 @@ impl std::str::FromStr for Time {
             None => Err(TimeParseError::NoSpace),
             Some((date, ofday_with_zone)) => {
                 let date = Date::from_str(date)?;
-                // TODO: Support other zones.
                 match ofday_with_zone.split_once('Z') {
                     Some((ofday, z)) if z.is_empty() => {
                         let ofday = OfDay::from_str(ofday)?;
-                        Ok(Self::of_date_ofday_gmt(date, ofday))
+                        return Ok(Self::of_date_ofday_gmt(date, ofday));
                     }
-                    Some(_) | None => Err(TimeParseError::NoZone),
+                    Some(_) | None => (),
+                };
+                if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('+') {
+                    let ofday = OfDay::from_str(ofday)?;
+                    let zone_offset = parse_zone_offset(zone_offset)?;
+                    return Ok(Self::of_date_ofday_gmt(date, ofday) + zone_offset);
                 }
+                if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('-') {
+                    let ofday = OfDay::from_str(ofday)?;
+                    let zone_offset = parse_zone_offset(zone_offset)?;
+                    return Ok(Self::of_date_ofday_gmt(date, ofday) - zone_offset);
+                }
+                Err(TimeParseError::NoZone)
             }
         }
     }
