@@ -1,3 +1,5 @@
+use crate::Span;
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "binio", derive(binprot_derive::BinProtRead, binprot_derive::BinProtWrite))]
 pub struct OfDay(i64);
@@ -11,6 +13,52 @@ pub enum OfDayError {
     InvalidNanosecond(u32),
 }
 
+use std::ops::{Add, AddAssign, Rem, Sub, SubAssign};
+
+impl Add<Span> for OfDay {
+    type Output = Self;
+
+    fn add(self, other: Span) -> Self {
+        Self(self.0 + other.to_int_ns()).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
+    }
+}
+
+impl AddAssign<Span> for OfDay {
+    fn add_assign(&mut self, other: Span) {
+        *self = *self + other
+    }
+}
+
+impl Sub<Span> for OfDay {
+    type Output = Self;
+
+    fn sub(self, other: Span) -> Self {
+        Self(self.0 - other.to_int_ns()).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
+    }
+}
+
+impl SubAssign<Span> for OfDay {
+    fn sub_assign(&mut self, other: Span) {
+        *self = *self - other
+    }
+}
+
+impl Sub for OfDay {
+    type Output = Span;
+
+    fn sub(self, other: Self) -> Span {
+        Span::of_int_ns(self.0 - other.0)
+    }
+}
+
+impl Rem<Span> for OfDay {
+    type Output = Span;
+
+    fn rem(self, other: Span) -> Span {
+        Span::of_int_ns(self.0 % other.to_int_ns())
+    }
+}
+
 impl std::fmt::Display for OfDayError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self)
@@ -20,9 +68,12 @@ impl std::fmt::Display for OfDayError {
 impl std::error::Error for OfDayError {}
 
 impl OfDay {
+    const START_OF_DAY: Self = OfDay(0);
+    const START_OF_NEXT_DAY: Self = OfDay(24 * 3600 * 1_000_000_000);
+
     // TODO: validate or clamp?
     pub fn of_ns_since_midnight(i: i64) -> Self {
-        Self(i)
+        Self(i).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
     }
 
     pub fn to_ns_since_midnight(self) -> i64 {
@@ -50,7 +101,7 @@ impl OfDay {
     }
 
     pub fn create(hour: u8, minute: u8, second: u8, nanosecond: u32) -> Result<Self, OfDayError> {
-        if hour >= 24 {
+        if hour >= 24 && !(hour == 24 && minute == 0 && second == 0 && nanosecond == 0) {
             Err(OfDayError::InvalidHour(hour))
         } else if minute >= 60 {
             Err(OfDayError::InvalidMinute(minute))

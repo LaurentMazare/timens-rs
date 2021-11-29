@@ -1,4 +1,4 @@
-use timens::OfDay;
+use timens::{OfDay, Span};
 
 fn test_str(h: u8, m: u8, s: u8, ns: u32, str: &str) {
     let ofday = OfDay::create(h, m, s, ns).unwrap();
@@ -19,6 +19,18 @@ fn to_string() {
     test_str(12, 34, 56, 789000000, "12:34:56.789");
     test_str(12, 34, 56, 789101100, "12:34:56.7891011");
     test_str(23, 59, 59, 999999999, "23:59:59.999999999");
+}
+
+#[test]
+fn ops() {
+    let ofday = OfDay::create(12, 0, 0, 0).unwrap();
+    assert_eq!(ofday.to_string(), "12:00:00");
+    assert_eq!((ofday + Span::SEC).to_string(), "12:00:01");
+    assert_eq!((ofday - Span::DAY).to_string(), "00:00:00");
+    assert_eq!((ofday + Span::DAY).to_string(), "24:00:00");
+    assert_eq!((ofday + Span::DAY - Span::NS).to_string(), "23:59:59.999999999");
+    assert_eq!(((ofday + Span::MS) % Span::SEC).to_string(), "1ms");
+    assert_eq!(((ofday + Span::MS) % Span::HR).to_string(), "1ms");
 }
 
 #[cfg(feature = "sexp")]
