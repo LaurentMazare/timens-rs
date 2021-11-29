@@ -24,9 +24,15 @@ fn to_string() {
 #[cfg(feature = "sexp")]
 #[test]
 fn sexp_roundtrip() {
-    let d: OfDay = "13:37".parse().unwrap();
-    let sexp = rsexp::SexpOf::sexp_of(&d);
-    assert_eq!(sexp, rsexp::Sexp::Atom("13:37:00".as_bytes().to_owned()));
-    let rt: OfDay = rsexp::OfSexp::of_sexp(&sexp).unwrap();
-    assert_eq!(d, rt)
+    fn test_sexp_rt(input: &str, output: &str) {
+        let d: OfDay = input.parse().unwrap();
+        let sexp = rsexp::SexpOf::sexp_of(&d);
+        assert_eq!(sexp, rsexp::Sexp::Atom(output.as_bytes().to_owned()));
+        let rt: OfDay = rsexp::OfSexp::of_sexp(&sexp).unwrap();
+        assert_eq!(d, rt)
+    }
+    test_sexp_rt("13", "13:00:00");
+    test_sexp_rt("13:37", "13:37:00");
+    test_sexp_rt("13:37:01", "13:37:01");
+    test_sexp_rt("13:37:01.0001", "13:37:01.0001");
 }

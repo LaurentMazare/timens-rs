@@ -93,7 +93,7 @@ impl std::fmt::Debug for OfDay {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParseOfDayError {
-    NoColumn,
+    EmptyString,
     MoreThanTwoColumns,
     MoreThanOneDot,
     InvalidNanosecondString(String),
@@ -126,7 +126,11 @@ impl std::str::FromStr for OfDay {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.split(':').collect::<Vec<_>>()[..] {
-            [] | [_] => Err(ParseOfDayError::NoColumn),
+            [] => Err(ParseOfDayError::EmptyString),
+            [hour] => {
+                let hour = u8::from_str(hour)?;
+                Ok(Self::create(hour, 0, 0, 0)?)
+            }
             [hour, minute] => {
                 let hour = u8::from_str(hour)?;
                 let minute = u8::from_str(minute)?;
