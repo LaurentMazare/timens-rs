@@ -153,7 +153,7 @@ impl std::error::Error for ParseSpanError {}
 impl std::str::FromStr for Span {
     type Err = ParseSpanError;
 
-    // TODO: Maybe add a bit of validation to avoid 1d1d for example.
+    // Note that "1d1d" is allowed, as it is in the OCaml implementation.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.chars().peekable();
         let negative = match chars.peek() {

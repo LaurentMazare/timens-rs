@@ -71,7 +71,6 @@ impl OfDay {
     const START_OF_DAY: Self = OfDay(0);
     const START_OF_NEXT_DAY: Self = OfDay(24 * 3600 * 1_000_000_000);
 
-    // TODO: validate or clamp?
     pub fn of_ns_since_midnight(i: i64) -> Self {
         Self(i).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
     }
