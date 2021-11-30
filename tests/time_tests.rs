@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use timens::{Span, Time};
+use timens::{Date, OfDay, Span, Time};
 
 #[test]
 fn time() {
@@ -39,6 +39,26 @@ fn from_str() {
     assert_eq!(
         Time::from_str("2020-01-16 23:22:33 America/New_York").unwrap(),
         Time::from_str("2020-01-17 04:22:33 GMT").unwrap(),
+    );
+}
+
+#[test]
+fn of_date_ofday_gmt() {
+    let time: Time = "2020-01-16 11:22:33.456Z".parse().unwrap();
+    let date = Date::create(2020, timens::Month::Jan, 16).unwrap();
+    let ofday = OfDay::create(11, 22, 33, 456_000_000).unwrap();
+    let (date2, ofday2) = time.to_date_ofday_gmt();
+    let time2 = Time::of_date_ofday_gmt(date, ofday);
+    assert_eq!(date, date2);
+    assert_eq!(ofday, ofday2);
+    assert_eq!(time, time2);
+    assert_eq!(
+        Time::of_date_ofday_gmt(date, OfDay::START_OF_DAY).to_string_gmt(),
+        "2020-01-16 00:00:00Z"
+    );
+    assert_eq!(
+        Time::of_date_ofday_gmt(date, OfDay::START_OF_NEXT_DAY).to_string_gmt(),
+        "2020-01-17 00:00:00Z"
     );
 }
 

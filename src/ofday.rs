@@ -68,8 +68,8 @@ impl std::fmt::Display for OfDayError {
 impl std::error::Error for OfDayError {}
 
 impl OfDay {
-    const START_OF_DAY: Self = OfDay(0);
-    const START_OF_NEXT_DAY: Self = OfDay(24 * 3600 * 1_000_000_000);
+    pub const START_OF_DAY: Self = OfDay(0);
+    pub const START_OF_NEXT_DAY: Self = OfDay(24 * 3600 * 1_000_000_000);
 
     pub fn of_ns_since_midnight(i: i64) -> Self {
         Self(i).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
