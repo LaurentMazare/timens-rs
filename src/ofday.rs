@@ -79,8 +79,12 @@ impl OfDay {
         self.0
     }
 
-    pub fn since_midnight(self) -> crate::Span {
+    pub fn to_span_since_midnight(self) -> crate::Span {
         crate::Span::of_int_ns(self.to_ns_since_midnight())
+    }
+
+    pub fn of_span_since_midnight(span: crate::Span) -> Self {
+        Self::of_ns_since_midnight(span.to_int_ns())
     }
 
     pub fn hour(self) -> i64 {
@@ -112,6 +116,14 @@ impl OfDay {
             let second = hour as i64 * 3600 + minute as i64 * 60 + second as i64;
             Ok(Self(second * 1_000_000_000 + nanosecond as i64))
         }
+    }
+
+    pub fn prev_multiple(self, rhs: Span) -> Self {
+        Self::of_span_since_midnight(self.to_span_since_midnight().prev_multiple(rhs))
+    }
+
+    pub fn next_multiple(self, rhs: Span) -> Self {
+        Self::of_span_since_midnight(self.to_span_since_midnight().next_multiple(rhs))
     }
 }
 

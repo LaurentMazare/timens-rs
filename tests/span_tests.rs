@@ -46,6 +46,35 @@ fn to_string() {
     assert_eq!("1.d0s.0s.1d".parse::<Span>().unwrap(), Span::DAY + Span::MIN * 144);
 }
 
+#[test]
+fn round() {
+    test_str("1d1h1m".parse::<Span>().unwrap().prev_multiple(Span::DAY), "1d");
+    test_str("1d".parse::<Span>().unwrap().prev_multiple(Span::DAY), "1d");
+    test_str("1d25h1m".parse::<Span>().unwrap().prev_multiple(Span::DAY), "2d");
+    test_str("0s".parse::<Span>().unwrap().prev_multiple(Span::HR), "0s");
+    test_str("17m".parse::<Span>().unwrap().prev_multiple(Span::HR), "0s");
+    test_str("17m".parse::<Span>().unwrap().prev_multiple(Span::MIN), "17m");
+    test_str("17m".parse::<Span>().unwrap().prev_multiple(Span::SEC), "17m");
+    test_str("-17m".parse::<Span>().unwrap().prev_multiple(Span::SEC), "-17m");
+    test_str("-17m".parse::<Span>().unwrap().prev_multiple(Span::MIN), "-17m");
+    test_str("-17m".parse::<Span>().unwrap().prev_multiple(Span::HR), "-1h");
+    test_str("-17m".parse::<Span>().unwrap().prev_multiple(Span::HR * 3), "-3h");
+    test_str("-6h17m".parse::<Span>().unwrap().prev_multiple(Span::HR * 3), "-9h");
+
+    test_str("1d1h1m".parse::<Span>().unwrap().next_multiple(Span::DAY), "2d");
+    test_str("1d".parse::<Span>().unwrap().next_multiple(Span::DAY), "1d");
+    test_str("1d25h1m".parse::<Span>().unwrap().next_multiple(Span::DAY), "3d");
+    test_str("0s".parse::<Span>().unwrap().next_multiple(Span::HR), "0s");
+    test_str("17m".parse::<Span>().unwrap().next_multiple(Span::HR), "1h");
+    test_str("17m".parse::<Span>().unwrap().next_multiple(Span::MIN), "17m");
+    test_str("17m".parse::<Span>().unwrap().next_multiple(Span::SEC), "17m");
+    test_str("-17m".parse::<Span>().unwrap().next_multiple(Span::SEC), "-17m");
+    test_str("-17m".parse::<Span>().unwrap().next_multiple(Span::MIN), "-17m");
+    test_str("-17m".parse::<Span>().unwrap().next_multiple(Span::HR), "0s");
+    test_str("-17m".parse::<Span>().unwrap().next_multiple(Span::HR * 3), "0s");
+    test_str("-6h17m".parse::<Span>().unwrap().next_multiple(Span::HR * 3), "-6h");
+}
+
 #[cfg(feature = "sexp")]
 #[test]
 fn sexp_roundtrip() {

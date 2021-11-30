@@ -58,6 +58,14 @@ impl Span {
     pub fn to_int_ns(self) -> i64 {
         self.0
     }
+
+    pub fn prev_multiple(self, rhs: Self) -> Self {
+        Self(self.0 - self.0.rem_euclid(rhs.0))
+    }
+
+    pub fn next_multiple(self, rhs: Self) -> Self {
+        (self - Self::NS).prev_multiple(rhs) + rhs
+    }
 }
 
 fn remove_trailing_zeros(value: i64, max_digits: usize) -> (i64, usize) {

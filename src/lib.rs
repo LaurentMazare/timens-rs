@@ -297,6 +297,14 @@ impl Time {
         self.write_tz(&mut s, tz).unwrap();
         s
     }
+
+    pub fn prev_multiple(self, rhs: Span) -> Self {
+        Self::of_span_since_epoch(self.to_span_since_epoch().prev_multiple(rhs))
+    }
+
+    pub fn next_multiple(self, rhs: Span) -> Self {
+        Self::of_span_since_epoch(self.to_span_since_epoch().next_multiple(rhs))
+    }
 }
 
 #[cfg(feature = "with-chrono")]
