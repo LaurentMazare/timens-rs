@@ -50,7 +50,7 @@ impl std::error::Error for TzParseError {}
 
 impl TzInfo {
     pub fn find(&self, time: Time) -> &TzOffset {
-        let sec = time.0.div_euclid(Span::SEC.to_int_ns());
+        let sec = time.to_int_ns_since_epoch().div_euclid(Span::SEC.to_int_ns());
         let index = self.rest.partition_point(|&(start_sec, _)| sec >= start_sec);
         if index == 0 {
             &self.first
@@ -76,7 +76,7 @@ impl TzInfo {
         };
         let sec = gmt_sec - tz_info.total_offset_sec() as i64;
         if sec >= min_sec && (self.rest.len() == next_i || sec < self.rest[next_i].0) {
-            Some(Time(sec * Span::SEC.to_int_ns() + nanosecond))
+            Some(crate::Time::of_int_ns_since_epoch(sec * Span::SEC.to_int_ns() + nanosecond))
         } else {
             None
         }
