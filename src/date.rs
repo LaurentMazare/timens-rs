@@ -373,6 +373,33 @@ impl Days {
     pub fn is_weekend(self) -> bool {
         self.day_of_week().is_weekend()
     }
+
+    fn round_step_to_business_day<F>(self, is_holiday: F, step: i32) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        let mut current = self;
+        loop {
+            if !is_holiday(current) {
+                return current;
+            }
+            current += step
+        }
+    }
+
+    pub fn round_forward_to_business_day<F>(self, is_holiday: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        self.round_step_to_business_day(is_holiday, 1)
+    }
+
+    pub fn round_backward_to_business_day<F>(self, is_holiday: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        self.round_step_to_business_day(is_holiday, -1)
+    }
 }
 
 impl std::fmt::Debug for Days {
