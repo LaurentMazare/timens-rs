@@ -90,6 +90,20 @@ fn iter() {
     }
 }
 
+#[test]
+fn business_date() {
+    let date = Date::from_str("2021-01-16").unwrap();
+    assert_eq!(date.round_forward_to_business_day(|d| d.is_weekday()), date + 2);
+    assert_eq!(date.round_backward_to_business_day(|d| d.is_weekday()), date - 1);
+    assert_eq!((date + 2).round_forward_to_business_day(|d| d.is_weekday()), date + 2);
+    assert_eq!((date + 2).round_backward_to_business_day(|d| d.is_weekday()), date + 2);
+    let dates: Vec<_> = date.business_days_until(date + 30, |d| d.is_weekend()).collect();
+    assert_eq!(
+        format!("{:?}", dates),
+        "[2021-01-16, 2021-01-17, 2021-01-23, 2021-01-24, 2021-01-30, 2021-01-31, 2021-02-06, 2021-02-07, 2021-02-13, 2021-02-14]"
+    );
+}
+
 #[cfg(feature = "binio")]
 #[test]
 fn binio_roundtrip() {

@@ -330,6 +330,33 @@ impl Date {
     pub fn is_weekend(self) -> bool {
         self.day_of_week().is_weekend()
     }
+
+    fn round_step_to_business_day<F>(self, is_business_day: F, step: i32) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        let mut current = self;
+        loop {
+            if is_business_day(current) {
+                return current;
+            }
+            current += step
+        }
+    }
+
+    pub fn round_forward_to_business_day<F>(self, is_business_day: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        self.round_step_to_business_day(is_business_day, 1)
+    }
+
+    pub fn round_backward_to_business_day<F>(self, is_business_day: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        self.round_step_to_business_day(is_business_day, -1)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -372,33 +399,6 @@ impl Days {
 
     pub fn is_weekend(self) -> bool {
         self.day_of_week().is_weekend()
-    }
-
-    fn round_step_to_business_day<F>(self, is_holiday: F, step: i32) -> Self
-    where
-        F: Fn(Self) -> bool,
-    {
-        let mut current = self;
-        loop {
-            if !is_holiday(current) {
-                return current;
-            }
-            current += step
-        }
-    }
-
-    pub fn round_forward_to_business_day<F>(self, is_holiday: F) -> Self
-    where
-        F: Fn(Self) -> bool,
-    {
-        self.round_step_to_business_day(is_holiday, 1)
-    }
-
-    pub fn round_backward_to_business_day<F>(self, is_holiday: F) -> Self
-    where
-        F: Fn(Self) -> bool,
-    {
-        self.round_step_to_business_day(is_holiday, -1)
     }
 }
 
@@ -573,5 +573,47 @@ impl Date {
 
     pub fn weekdays_until(self, up: Self) -> WeekdaysBetween {
         Self::weekdays_between(self, up)
+    }
+}
+
+pub struct BusinessDaysBetween<F: Fn(Date) -> bool> {
+    current_date: Date,
+    last_date: Date,
+    is_business_day: F,
+}
+
+impl<T: Fn(Date) -> bool> Iterator for BusinessDaysBetween<T> {
+    type Item = Date;
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.current_date <= self.last_date {
+            if (self.is_business_day)(self.current_date) {
+                let res = self.current_date;
+                self.current_date += 1;
+                return Some(res);
+            }
+            self.current_date += 1;
+        }
+        None
+    }
+}
+
+impl Date {
+    /// List all the business days between two dates (inclusive).
+    pub fn business_days_between<F>(
+        lo: Self,
+        up: Self,
+        is_business_day: F,
+    ) -> BusinessDaysBetween<F>
+    where
+        F: Fn(Self) -> bool,
+    {
+        BusinessDaysBetween { current_date: lo, last_date: up, is_business_day }
+    }
+
+    pub fn business_days_until<F>(self, up: Self, is_business_day: F) -> BusinessDaysBetween<F>
+    where
+        F: Fn(Self) -> bool,
+    {
+        Self::business_days_between(self, up, is_business_day)
     }
 }
