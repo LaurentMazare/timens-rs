@@ -102,6 +102,42 @@ fn business_date() {
         format!("{:?}", dates),
         "[2021-01-16, 2021-01-17, 2021-01-23, 2021-01-24, 2021-01-30, 2021-01-31, 2021-02-06, 2021-02-07, 2021-02-13, 2021-02-14]"
     );
+    assert_eq!(
+        date.add_business_days_rounding_forward(104, |d| d.is_weekend()).to_string(),
+        "2022-01-15"
+    );
+    assert_eq!(
+        date.add_business_days_rounding_backward(104, |d| d.is_weekend()).to_string(),
+        "2022-01-15"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_forward(104, |d| d.is_weekend()).to_string(),
+        "2022-01-15"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_backward(104, |d| d.is_weekend()).to_string(),
+        "2022-01-09"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_forward(-104, |d| d.is_weekend()).to_string(),
+        "2020-01-18"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_backward(-104, |d| d.is_weekend()).to_string(),
+        "2020-01-12"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_backward(-1, |d| d.is_weekend()).to_string(),
+        "2021-01-09"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_backward(1, |d| d.is_weekend()).to_string(),
+        "2021-01-16"
+    );
+    assert_eq!(
+        (date - 1).add_business_days_rounding_forward(1, |d| d.is_weekend()).to_string(),
+        "2021-01-17"
+    );
 }
 
 #[cfg(feature = "binio")]

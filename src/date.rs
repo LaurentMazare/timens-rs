@@ -344,6 +344,8 @@ impl Date {
         }
     }
 
+    /// Rounds the date to the next value that satisfies is_business_day if it
+    /// is not already a business day.
     pub fn round_forward_to_business_day<F>(self, is_business_day: F) -> Self
     where
         F: Fn(Self) -> bool,
@@ -351,11 +353,53 @@ impl Date {
         self.round_step_to_business_day(is_business_day, 1)
     }
 
+    /// Rounds the date to the previous value that satisfies is_business_day if it
+    /// is not already a business day.
     pub fn round_backward_to_business_day<F>(self, is_business_day: F) -> Self
     where
         F: Fn(Self) -> bool,
     {
         self.round_step_to_business_day(is_business_day, -1)
+    }
+
+    fn add_business_days_no_rounding<F>(self, days: i64, is_business_day: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        let mut current = self;
+        let step = if days >= 0 { 1 } else { -1 };
+        let mut days = days.abs();
+        loop {
+            if is_business_day(current) {
+                if days == 0 {
+                    return current;
+                }
+                days -= 1;
+            }
+            current += step;
+        }
+    }
+
+    /// First rounds the given date backward to the previous business day as
+    /// defined by F if it does not already satisfy it.  Then advances by the
+    /// given number of business days which may be negative.
+    pub fn add_business_days_rounding_backward<F>(self, days: i64, is_business_day: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        self.round_backward_to_business_day(&is_business_day)
+            .add_business_days_no_rounding(days, &is_business_day)
+    }
+
+    /// First rounds the given date forward to the next business day as defined
+    /// by F if it does not already satisfy it.  Then advances by the given number
+    /// of business days which may be negative.
+    pub fn add_business_days_rounding_forward<F>(self, days: i64, is_business_day: F) -> Self
+    where
+        F: Fn(Self) -> bool,
+    {
+        self.round_forward_to_business_day(&is_business_day)
+            .add_business_days_no_rounding(days, &is_business_day)
     }
 }
 
