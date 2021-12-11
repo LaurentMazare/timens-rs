@@ -43,6 +43,7 @@ mod binio {
 #[cfg(feature = "sexp")]
 impl rsexp::UseToString for Date {}
 
+/// Returns whether `year` is a leap year or not.
 pub const fn is_leap_year(year: u32) -> bool {
     year % 4 == 0 && year % 100 != 0 || year % 400 == 0
 }
@@ -59,6 +60,7 @@ pub enum DayOfWeek {
 }
 
 impl DayOfWeek {
+    /// Conversion from an int, 0 for Sunday, 1 for Monday, etc.
     pub fn of_u8(i: u8) -> Option<DayOfWeek> {
         match i {
             0 => Some(Self::Sun),
@@ -72,6 +74,7 @@ impl DayOfWeek {
         }
     }
 
+    /// Conversion to an int, 0 for Sunday, 1 for Monday, etc.
     pub fn to_u8(self) -> u8 {
         match self {
             Self::Sun => 0,
@@ -84,6 +87,7 @@ impl DayOfWeek {
         }
     }
 
+    /// Returns true for any day except Saturday and Sunday.
     pub fn is_weekday(self) -> bool {
         match self {
             Self::Mon | Self::Tue | Self::Wed | Self::Thu | Self::Fri => true,
@@ -91,6 +95,7 @@ impl DayOfWeek {
         }
     }
 
+    /// Returns true for Saturday and Sunday.
     pub fn is_weekend(self) -> bool {
         !self.is_weekday()
     }
@@ -114,6 +119,7 @@ pub enum Month {
 }
 
 impl Month {
+    /// The number of days for this month in the given year.
     pub const fn days_in_month(self, year: u32) -> u8 {
         match self {
             Self::Jan | Self::Mar | Self::May | Self::Jul | Self::Aug | Self::Oct | Self::Dec => 31,
@@ -128,6 +134,7 @@ impl Month {
         }
     }
 
+    /// Converts to an int, 1 for January, 2 for February, etc.
     pub fn to_u8(self) -> u8 {
         match self {
             Self::Jan => 1,
@@ -145,6 +152,7 @@ impl Month {
         }
     }
 
+    /// Converts from an int, 1 for January, 2 for February, etc.
     pub fn of_u8(m: u8) -> Option<Self> {
         match m {
             1 => Some(Self::Jan),
@@ -579,11 +587,12 @@ impl Iterator for DatesBetween {
 }
 
 impl Date {
-    /// List all the dates between two dates (inclusive).
+    /// Lists all the dates between two dates (inclusive).
     pub fn dates_between(lo: Self, up: Self) -> DatesBetween {
         DatesBetween { current_day: Days::of_date(lo), last_day: Days::of_date(up) }
     }
 
+    /// Lists all the dates from the `self` date until `up` (inclusive).
     pub fn dates_until(self, up: Self) -> DatesBetween {
         Self::dates_between(self, up)
     }
@@ -610,11 +619,12 @@ impl Iterator for WeekdaysBetween {
 }
 
 impl Date {
-    /// List all the weekdays between two dates (inclusive).
+    /// Lists all the weekdays between two dates (inclusive).
     pub fn weekdays_between(lo: Self, up: Self) -> WeekdaysBetween {
         WeekdaysBetween { current_day: Days::of_date(lo), last_day: Days::of_date(up) }
     }
 
+    /// Lists all the weekdays from the `self` date until `up` (inclusive).
     pub fn weekdays_until(self, up: Self) -> WeekdaysBetween {
         Self::weekdays_between(self, up)
     }
@@ -642,7 +652,7 @@ impl<T: Fn(Date) -> bool> Iterator for BusinessDaysBetween<T> {
 }
 
 impl Date {
-    /// List all the business days between two dates (inclusive).
+    /// Lists all the business days between two dates (inclusive).
     pub fn business_days_between<F>(
         lo: Self,
         up: Self,
@@ -654,6 +664,7 @@ impl Date {
         BusinessDaysBetween { current_date: lo, last_date: up, is_business_day }
     }
 
+    /// Lists all the business days from the `self` date until `up` (inclusive).
     pub fn business_days_until<F>(self, up: Self, is_business_day: F) -> BusinessDaysBetween<F>
     where
         F: Fn(Self) -> bool,
