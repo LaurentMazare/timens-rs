@@ -16,11 +16,7 @@ pub use timezone_data::Tz;
 mod time;
 pub use time::*;
 
-#[cfg(feature = "binio")]
-extern crate binprot;
-#[cfg(feature = "binio")]
-extern crate binprot_derive;
 #[cfg(feature = "with-chrono")]
-extern crate chrono;
+use ::chrono;
 #[cfg(feature = "with-chrono")]
-extern crate chrono_tz;
+use ::chrono_tz;

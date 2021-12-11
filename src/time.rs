@@ -1,5 +1,5 @@
 #[cfg(feature = "binio")]
-use binprot_derive::{BinProtRead, BinProtWrite};
+use binprot::macros::{BinProtRead, BinProtWrite};
 
 #[cfg(feature = "with-chrono")]
 use chrono::{TimeZone, Timelike};
