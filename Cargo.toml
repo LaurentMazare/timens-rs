@@ -16,7 +16,7 @@ readme = "README.md"
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.4", optional = true }
 binprot = { version = "0.1.4", optional = true }
-rsexp = { version = "0.2.2", optional = true }
+rsexp = { version = "0.2.3", optional = true }
 
 [features]
 binio = [ "binprot" ]
