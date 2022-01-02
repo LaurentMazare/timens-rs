@@ -1,6 +1,6 @@
 [package]
 name = "timens"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Laurent Mazare <lmazare@gmail.com>"]
 edition = "2018"
 build = "build.rs"
@@ -15,7 +15,7 @@ readme = "README.md"
 [dependencies]
 chrono = { version = "0.4", optional = true }
 chrono-tz = { version = "0.4", optional = true }
-binprot = { version = "0.1.4", optional = true }
+binprot = { version = "0.1.6", optional = true }
 rsexp = { version = "0.2.3", optional = true }
 
 [features]
