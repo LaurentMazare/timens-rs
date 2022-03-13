@@ -31,12 +31,12 @@ fn strip_comments(mut line: String) -> String {
 // it's a hyphen, in which case remove it. This is so the names can be used
 // as rust identifiers.
 fn convert_bad_chars(name: &str) -> String {
-    let name = name.replace("/", "__").replace("+", "Plus");
+    let name = name.replace('/', "__").replace('+', "Plus");
     if let Some(pos) = name.find('-') {
         if name[pos + 1..].chars().next().map(char::is_numeric).unwrap_or(false) {
-            name.replace("-", "Minus")
+            name.replace('-', "Minus")
         } else {
-            name.replace("-", "")
+            name.replace('-', "")
         }
     } else {
         name
