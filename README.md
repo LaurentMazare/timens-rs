@@ -15,3 +15,8 @@ environment variable, e.g.:
 ```bash
 TIMENS_TZ_FILTER="London|New_York|Hong_Kong|Tokyo|GMT" cargo build
 ```
+
+The [tz repo](https://github.com/eggert/tz.git) is included as a git subtree, this can be updated via:
+```bash
+git subtree add --prefix tz https://github.com/eggert/tz.git main --squash
+```
