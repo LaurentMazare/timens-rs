@@ -29,28 +29,25 @@ static void unlock(void) { }
 #endif
 
 #ifndef TZ_ABBR_MAX_LEN
-#define TZ_ABBR_MAX_LEN	16
+# define TZ_ABBR_MAX_LEN 16
 #endif /* !defined TZ_ABBR_MAX_LEN */
 
 #ifndef TZ_ABBR_CHAR_SET
-#define TZ_ABBR_CHAR_SET \
+# define TZ_ABBR_CHAR_SET \
 	"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 :+-._"
 #endif /* !defined TZ_ABBR_CHAR_SET */
 
 #ifndef TZ_ABBR_ERR_CHAR
-#define TZ_ABBR_ERR_CHAR	'_'
+# define TZ_ABBR_ERR_CHAR '_'
 #endif /* !defined TZ_ABBR_ERR_CHAR */
 
 /*
-** SunOS 4.1.1 headers lack O_BINARY.
+** Support non-POSIX platforms that distinguish between text and binary files.
 */
 
-#ifdef O_BINARY
-#define OPEN_MODE	(O_RDONLY | O_BINARY)
-#endif /* defined O_BINARY */
 #ifndef O_BINARY
-#define OPEN_MODE	O_RDONLY
-#endif /* !defined O_BINARY */
+# define O_BINARY 0
+#endif
 
 #ifndef WILDABBR
 /*
@@ -72,12 +69,13 @@ static void unlock(void) { }
 ** manual page of what this "time zone abbreviation" means (doing this so
 ** that tzname[0] has the "normal" length of three characters).
 */
-#define WILDABBR	"   "
+# define WILDABBR "   "
 #endif /* !defined WILDABBR */
 
 static const char	wildabbr[] = WILDABBR;
 
-static const char	gmt[] = "GMT";
+static char const etc_utc[] = "Etc/UTC";
+static char const *utc = etc_utc + sizeof "Etc/" - 1;
 
 /*
 ** The DST rules to use if TZ has no rules and we can't load TZDEFRULES.
@@ -86,7 +84,7 @@ static const char	gmt[] = "GMT";
 ** for historical reasons, US rules are a common default.
 */
 #ifndef TZDEFRULESTRING
-#define TZDEFRULESTRING ",M3.2.0,M11.1.0"
+# define TZDEFRULESTRING ",M3.2.0,M11.1.0"
 #endif
 
 struct ttinfo {				/* time type information */
@@ -102,14 +100,20 @@ struct lsinfo {				/* leap second information */
 	int_fast32_t	ls_corr;	/* correction to apply */
 };
 
-#define SMALLEST(a, b)	(((a) < (b)) ? (a) : (b))
-#define BIGGEST(a, b)	(((a) > (b)) ? (a) : (b))
+/* This abbreviation means local time is unspecified.  */
+static char const UNSPEC[] = "-00";
+
+/* How many extra bytes are needed at the end of struct state's chars array.
+   This needs to be at least 1 for null termination in case the input
+   data isn't properly terminated, and it also needs to be big enough
+   for ttunspecified to work without crashing.  */
+enum { CHARS_EXTRA = max(sizeof UNSPEC, 2) - 1 };
 
 #ifdef TZNAME_MAX
-#define MY_TZNAME_MAX	TZNAME_MAX
+# define MY_TZNAME_MAX TZNAME_MAX
 #endif /* defined TZNAME_MAX */
 #ifndef TZNAME_MAX
-#define MY_TZNAME_MAX	255
+# define MY_TZNAME_MAX 255
 #endif /* !defined TZNAME_MAX */
 
 struct state {
@@ -122,8 +126,8 @@ struct state {
 	time_t		ats[TZ_MAX_TIMES];
 	unsigned char	types[TZ_MAX_TIMES];
 	struct ttinfo	ttis[TZ_MAX_TYPES];
-	char		chars[BIGGEST(BIGGEST(TZ_MAX_CHARS + 1, sizeof gmt),
-				(2 * (MY_TZNAME_MAX + 1)))];
+	char chars[max(max(TZ_MAX_CHARS + CHARS_EXTRA, sizeof "UTC"),
+		       2 * (MY_TZNAME_MAX + 1))];
 	struct lsinfo	lsis[TZ_MAX_LEAPS];
 
 	/* The time type to use for early times or if no transitions.
@@ -165,12 +169,12 @@ static struct state *	gmtptr;
 #ifndef ALL_STATE
 static struct state	lclmem;
 static struct state	gmtmem;
-#define lclptr		(&lclmem)
-#define gmtptr		(&gmtmem)
+static struct state *const lclptr = &lclmem;
+static struct state *const gmtptr = &gmtmem;
 #endif /* State Farm */
 
 #ifndef TZ_STRLEN_MAX
-#define TZ_STRLEN_MAX 255
+# define TZ_STRLEN_MAX 255
 #endif /* !defined TZ_STRLEN_MAX */
 
 static char		lcl_TZname[TZ_STRLEN_MAX + 1];
@@ -209,6 +213,15 @@ init_ttinfo(struct ttinfo *s, int_fast32_t utoff, bool isdst, int desigidx)
   s->tt_desigidx = desigidx;
   s->tt_ttisstd = false;
   s->tt_ttisut = false;
+}
+
+/* Return true if SP's time type I does not specify local time.  */
+static bool
+ttunspecified(struct state const *sp, int i)
+{
+  char const *abbr = &sp->chars[sp->ttis[i].tt_desigidx];
+  /* memcmp is likely faster than strcmp, and is safe due to CHARS_EXTRA.  */
+  return memcmp(abbr, UNSPEC, sizeof UNSPEC) == 0;
 }
 
 static int_fast32_t
@@ -273,42 +286,58 @@ update_tzname_etc(struct state const *sp, struct ttinfo const *ttisp)
 #endif
 }
 
+/* If STDDST_MASK indicates that SP's TYPE provides useful info,
+   update tzname, timezone, and/or altzone and return STDDST_MASK,
+   diminished by the provided info if it is a specified local time.
+   Otherwise, return STDDST_MASK.  See settzname for STDDST_MASK.  */
+static int
+may_update_tzname_etc(int stddst_mask, struct state *sp, int type)
+{
+  struct ttinfo *ttisp = &sp->ttis[type];
+  int this_bit = 1 << ttisp->tt_isdst;
+  if (stddst_mask & this_bit) {
+    update_tzname_etc(sp, ttisp);
+    if (!ttunspecified(sp, type))
+      return stddst_mask & ~this_bit;
+  }
+  return stddst_mask;
+}
+
 static void
 settzname(void)
 {
 	register struct state * const	sp = lclptr;
 	register int			i;
 
+	/* If STDDST_MASK & 1 we need info about a standard time.
+	   If STDDST_MASK & 2 we need info about a daylight saving time.
+	   When STDDST_MASK becomes zero we can stop looking.  */
+	int stddst_mask = 0;
+
 #if HAVE_TZNAME
-	tzname[0] = tzname[1] = (char *) (sp ? wildabbr : gmt);
+	tzname[0] = tzname[1] = (char *) (sp ? wildabbr : utc);
+	stddst_mask = 3;
 #endif
 #if USG_COMPAT
-	daylight = 0;
 	timezone = 0;
+	stddst_mask = 3;
 #endif
 #if ALTZONE
 	altzone = 0;
+	stddst_mask |= 2;
 #endif
-	if (sp == NULL) {
-		return;
-	}
 	/*
 	** And to get the latest time zone abbreviations into tzname. . .
 	*/
-	for (i = 0; i < sp->typecnt; ++i) {
-		register const struct ttinfo * const	ttisp = &sp->ttis[i];
-		update_tzname_etc(sp, ttisp);
+	if (sp) {
+	  for (i = sp->timecnt - 1; stddst_mask && 0 <= i; i--)
+	    stddst_mask = may_update_tzname_etc(stddst_mask, sp, sp->types[i]);
+	  for (i = sp->typecnt - 1; stddst_mask && 0 <= i; i--)
+	    stddst_mask = may_update_tzname_etc(stddst_mask, sp, i);
 	}
-	for (i = 0; i < sp->timecnt; ++i) {
-		register const struct ttinfo * const	ttisp =
-							&sp->ttis[
-								sp->types[i]];
-		update_tzname_etc(sp, ttisp);
 #if USG_COMPAT
-		if (ttisp->tt_isdst)
-			daylight = 1;
+	daylight = stddst_mask >> 1 ^ 1;
 #endif
-	}
 }
 
 static void
@@ -359,8 +388,7 @@ union local_storage {
   } u;
 
   /* The file name to be opened.  */
-  char fullname[BIGGEST(sizeof(struct file_analysis),
-			sizeof tzdirslash + 1024)];
+  char fullname[max(sizeof(struct file_analysis), sizeof tzdirslash + 1024)];
 };
 
 /* Load tz data from the file named NAME into *SP.  Read extended
@@ -421,7 +449,7 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 	}
 	if (doaccess && access(name, R_OK) != 0)
 	  return errno;
-	fid = open(name, OPEN_MODE);
+	fid = open(name, O_RDONLY | O_BINARY);
 	if (fid < 0)
 	  return errno;
 
@@ -528,7 +556,9 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 		}
 		for (i = 0; i < sp->charcnt; ++i)
 			sp->chars[i] = *p++;
-		sp->chars[i] = '\0';	/* ensure '\0' at end */
+		/* Ensure '\0'-terminated, and make it safe to call
+		   ttunspecified later.  */
+		memset(&sp->chars[i], 0, CHARS_EXTRA);
 
 		/* Read leap seconds, discarding those out of time_t range.  */
 		leapcnt = 0;
@@ -698,13 +728,13 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 	   standard-time type.  See:
 	   https://mm.icann.org/pipermail/tz/2013-May/019368.html */
 	/*
-	** If type 0 is unused in transitions,
+	** If type 0 does not specify local time, or is unused in transitions,
 	** it's the type to use for early times.
 	*/
 	for (i = 0; i < sp->timecnt; ++i)
 		if (sp->types[i] == 0)
 			break;
-	i = i < sp->timecnt ? -1 : 0;
+	i = i < sp->timecnt && ! ttunspecified(sp, 0) ? -1 : 0;
 	/*
 	** Absent the above,
 	** if there are transition times
@@ -772,12 +802,14 @@ typesequiv(const struct state *sp, int a, int b)
 		b < 0 || b >= sp->typecnt)
 			result = false;
 	else {
+		/* Compare the relevant members of *AP and *BP.
+		   Ignore tt_ttisstd and tt_ttisut, as they are
+		   irrelevant now and counting them could cause
+		   sp->goahead to mistakenly remain false.  */
 		register const struct ttinfo *	ap = &sp->ttis[a];
 		register const struct ttinfo *	bp = &sp->ttis[b];
 		result = (ap->tt_utoff == bp->tt_utoff
 			  && ap->tt_isdst == bp->tt_isdst
-			  && ap->tt_ttisstd == bp->tt_ttisstd
-			  && ap->tt_ttisut == bp->tt_ttisut
 			  && (strcmp(&sp->chars[ap->tt_desigidx],
 				     &sp->chars[bp->tt_desigidx])
 			      == 0));
@@ -1066,7 +1098,7 @@ transtime(const int year, register const struct rule *const rulep,
 			value += mon_lengths[leapyear][i] * SECSPERDAY;
 		break;
 
-	default: UNREACHABLE();
+	default: unreachable();
 	}
 
 	/*
@@ -1364,8 +1396,8 @@ tzparse(const char *name, struct state *sp, struct state *basep)
 static void
 gmtload(struct state *const sp)
 {
-	if (tzload(gmt, sp, true) != 0)
-	  tzparse("GMT0", sp, NULL);
+	if (tzload(etc_utc, sp, true) != 0)
+	  tzparse("UTC0", sp, NULL);
 }
 
 /* Initialize *SP to a value appropriate for the TZ setting NAME.
@@ -1383,7 +1415,7 @@ zoneinit(struct state *sp, char const *name)
     sp->charcnt = 0;
     sp->goback = sp->goahead = false;
     init_ttinfo(&sp->ttis[0], 0, false, 0);
-    strcpy(sp->chars, gmt);
+    strcpy(sp->chars, utc);
     sp->defaulttype = 0;
     return 0;
   } else {
@@ -1492,7 +1524,7 @@ tzfree(timezone_t sp)
 ** set the applicable parts of tzname, timezone and altzone;
 ** however, it's OK to omit this step if the timezone is POSIX-compatible,
 ** since in that case tzset should have already done this step correctly.
-** SETNAME's type is intfast32_t for compatibility with gmtsub,
+** SETNAME's type is int_fast32_t for compatibility with gmtsub,
 ** but it is actually a boolean and its value should be 0 or 1.
 */
 
@@ -1637,7 +1669,7 @@ gmtsub(struct state const *sp, time_t const *timep, int_fast32_t offset,
 	** but this is no time for a treasure hunt.
 	*/
 	tmp->TM_ZONE = ((char *)
-			(offset ? wildabbr : gmtptr ? gmtptr->chars : gmt));
+			(offset ? wildabbr : gmtptr ? gmtptr->chars : utc));
 #endif /* defined TM_ZONE */
 	return result;
 }
@@ -1828,7 +1860,7 @@ ctime_r(const time_t *timep, char *buf)
 */
 
 #ifndef WRONG
-#define WRONG	(-1)
+# define WRONG (-1)
 #endif /* !defined WRONG */
 
 /*
@@ -1919,6 +1951,23 @@ tmcomp(register const struct tm *const atmp,
 	return result;
 }
 
+/* Copy to *DEST from *SRC.  Copy only the members needed for mktime,
+   as other members might not be initialized.  */
+static void
+mktmcpy(struct tm *dest, struct tm *const src)
+{
+  dest->tm_sec = src->tm_sec;
+  dest->tm_min = src->tm_min;
+  dest->tm_hour = src->tm_hour;
+  dest->tm_mday = src->tm_mday;
+  dest->tm_mon = src->tm_mon;
+  dest->tm_year = src->tm_year;
+  dest->tm_isdst = src->tm_isdst;
+#if defined TM_GMTOFF && ! UNINIT_TRAP
+  dest->TM_GMTOFF = src->TM_GMTOFF;
+#endif
+}
+
 static time_t
 time2sub(struct tm *const tmp,
 	 struct tm *(*funcp)(struct state const *, time_t const *,
@@ -1940,7 +1989,8 @@ time2sub(struct tm *const tmp,
 	struct tm			yourtm, mytm;
 
 	*okayp = false;
-	yourtm = *tmp;
+	mktmcpy(&yourtm, tmp);
+
 	if (do_norm_secs) {
 		if (normalize_overflow(&yourtm.tm_min, &yourtm.tm_sec,
 			SECSPERMIN))
@@ -2049,10 +2099,10 @@ time2sub(struct tm *const tmp,
 		    && (yourtm.TM_GMTOFF < 0
 			? (-SECSPERDAY <= yourtm.TM_GMTOFF
 			   && (mytm.TM_GMTOFF <=
-			       (SMALLEST(INT_FAST32_MAX, LONG_MAX)
+			       (min(INT_FAST32_MAX, LONG_MAX)
 				+ yourtm.TM_GMTOFF)))
 			: (yourtm.TM_GMTOFF <= SECSPERDAY
-			   && ((BIGGEST(INT_FAST32_MIN, LONG_MIN)
+			   && ((max(INT_FAST32_MIN, LONG_MIN)
 				+ yourtm.TM_GMTOFF)
 			       <= mytm.TM_GMTOFF)))) {
 		  /* MYTM matches YOURTM except with the wrong UT offset.
@@ -2089,6 +2139,8 @@ time2sub(struct tm *const tmp,
 			for (j = sp->typecnt - 1; j >= 0; --j) {
 				if (sp->ttis[j].tt_isdst == yourtm.tm_isdst)
 					continue;
+				if (ttunspecified(sp, j))
+				  continue;
 				newt = (t + sp->ttis[j].tt_utoff
 					- sp->ttis[i].tt_utoff);
 				if (! funcp(sp, &newt, offset, &mytm))
@@ -2181,7 +2233,7 @@ time1(struct tm *const tmp,
 		seen[i] = false;
 	nseen = 0;
 	for (i = sp->timecnt - 1; i >= 0; --i)
-		if (!seen[sp->types[i]]) {
+		if (!seen[sp->types[i]] && !ttunspecified(sp, sp->types[i])) {
 			seen[sp->types[i]] = true;
 			types[nseen++] = sp->types[i];
 		}
@@ -2244,7 +2296,6 @@ mktime(struct tm *tmp)
 }
 
 #ifdef STD_INSPIRED
-
 time_t
 timelocal(struct tm *tmp)
 {
@@ -2252,13 +2303,9 @@ timelocal(struct tm *tmp)
 		tmp->tm_isdst = -1;	/* in case it wasn't initialized */
 	return mktime(tmp);
 }
-
-time_t
-timegm(struct tm *tmp)
-{
-  return timeoff(tmp, 0);
-}
-
+#else
+static
+#endif
 time_t
 timeoff(struct tm *tmp, long offset)
 {
@@ -2268,7 +2315,18 @@ timeoff(struct tm *tmp, long offset)
   return time1(tmp, gmtsub, gmtptr, offset);
 }
 
-#endif /* defined STD_INSPIRED */
+time_t
+timegm(struct tm *tmp)
+{
+  time_t t;
+  struct tm tmcpy;
+  mktmcpy(&tmcpy, tmp);
+  tmcpy.tm_wday = -1;
+  t = timeoff(&tmcpy, 0);
+  if (0 <= tmcpy.tm_wday)
+    *tmp = tmcpy;
+  return t;
+}
 
 static int_fast32_t
 leapcorr(struct state const *sp, time_t t)
