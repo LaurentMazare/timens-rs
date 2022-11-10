@@ -56,8 +56,6 @@ struct lc_time_T {
 	const char *	date_fmt;
 };
 
-#define Locale	(&C_time_locale)
-
 static const struct lc_time_T	C_time_locale = {
 	{
 		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -113,7 +111,7 @@ static char *	_fmt(const char *, const struct tm *, char *, const char *,
 static char *	_yconv(int, int, bool, bool, char *, char const *);
 
 #ifndef YEAR_2000_NAME
-#define YEAR_2000_NAME	"CHECK_STRFTIME_FORMATS_FOR_TWO_DIGIT_YEARS"
+# define YEAR_2000_NAME "CHECK_STRFTIME_FORMATS_FOR_TWO_DIGIT_YEARS"
 #endif /* !defined YEAR_2000_NAME */
 
 #if HAVE_STRFTIME_L
@@ -164,6 +162,8 @@ static char *
 _fmt(const char *format, const struct tm *t, char *pt,
      const char *ptlim, enum warn *warnp)
 {
+	struct lc_time_T const *Locale = &C_time_locale;
+
 	for ( ; *format; ++format) {
 		if (*format == '%') {
 label:
@@ -319,22 +319,21 @@ label:
 								time_t) + 1];
 					time_t		mkt;
 
-					tm = *t;
-					tm.tm_yday = -1;
+					tm.tm_sec = t->tm_sec;
+					tm.tm_min = t->tm_min;
+					tm.tm_hour = t->tm_hour;
+					tm.tm_mday = t->tm_mday;
+					tm.tm_mon = t->tm_mon;
+					tm.tm_year = t->tm_year;
+					tm.tm_isdst = t->tm_isdst;
+#if defined TM_GMTOFF && ! UNINIT_TRAP
+					tm.TM_GMTOFF = t->TM_GMTOFF;
+#endif
 					mkt = mktime(&tm);
-					if (mkt == (time_t) -1) {
-					  /* Fail unless this -1 represents
-					     a valid time.  */
-					  struct tm tm_1;
-					  if (!localtime_r(&mkt, &tm_1))
-					    return NULL;
-					  if (!(tm.tm_year == tm_1.tm_year
-						&& tm.tm_yday == tm_1.tm_yday
-						&& tm.tm_hour == tm_1.tm_hour
-						&& tm.tm_min == tm_1.tm_min
-						&& tm.tm_sec == tm_1.tm_sec))
-					    return NULL;
-					}
+					/* If mktime fails, %s expands to the
+					   value of (time_t) -1 as a failure
+					   marker; this is better in practice
+					   than strftime failing.  */
 					if (TYPE_SIGNED(time_t)) {
 					  intmax_t n = mkt;
 					  sprintf(buf, "%"PRIdMAX, n);
@@ -561,15 +560,15 @@ label:
 # endif
 				negative = diff < 0;
 				if (diff == 0) {
-#ifdef TM_ZONE
+# ifdef TM_ZONE
 				  negative = t->TM_ZONE[0] == '-';
-#else
+# else
 				  negative = t->tm_isdst < 0;
-# if HAVE_TZNAME
+#  if HAVE_TZNAME
 				  if (tzname[t->tm_isdst != 0][0] == '-')
 				    negative = true;
+#  endif
 # endif
-#endif
 				}
 				if (negative) {
 					sign = "-";
@@ -636,7 +635,7 @@ _yconv(int a, int b, bool convert_top, bool convert_yy,
 	register int	lead;
 	register int	trail;
 
-#define DIVISOR	100
+	int DIVISOR = 100;
 	trail = a % DIVISOR + b % DIVISOR;
 	lead = a / DIVISOR + b / DIVISOR + trail / DIVISOR;
 	trail %= DIVISOR;

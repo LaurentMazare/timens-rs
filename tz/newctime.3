@@ -4,7 +4,7 @@ asctime, ctime, difftime, gmtime, localtime, mktime \- convert date and time
 .SH SYNOPSIS
 .nf
 .ie \n(.g .ds - \f(CW-\fP
-.el ds - \-
+.el .ds - \-
 .B #include <time.h>
 .PP
 .BR "extern char *tzname[];" " /\(** (optional) \(**/"
@@ -271,8 +271,9 @@ so were made when the library containing these functions was
 created.
 Similarly, the
 .B tzname
-variable is optional.
-There is no guarantee that these fields and this variable will
+variable is optional; also, there is no guarantee that
+.B tzname
+will
 continue to exist in this form in future releases of this code.
 .SH FILES
 .ta \w'/usr/share/zoneinfo/posixrules\0\0'u

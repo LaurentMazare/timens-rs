@@ -35,11 +35,11 @@
 #endif
 
 #ifndef ZDUMP_LO_YEAR
-#define ZDUMP_LO_YEAR	(-500)
+# define ZDUMP_LO_YEAR (-500)
 #endif /* !defined ZDUMP_LO_YEAR */
 
 #ifndef ZDUMP_HI_YEAR
-#define ZDUMP_HI_YEAR	2500
+# define ZDUMP_HI_YEAR 2500
 #endif /* !defined ZDUMP_HI_YEAR */
 
 #define SECSPERNYEAR	(SECSPERDAY * DAYSPERNYEAR)
@@ -57,7 +57,7 @@
 enum { SECSPER400YEARS_FITS = SECSPERLYEAR <= INTMAX_MAX / 400 };
 
 #if HAVE_GETTEXT
-#include <locale.h>	/* for setlocale */
+# include <locale.h> /* for setlocale */
 #endif /* HAVE_GETTEXT */
 
 #if ! HAVE_LOCALTIME_RZ
@@ -84,7 +84,7 @@ static time_t const absolute_max_time =
    ? (((time_t) 1 << atime_shift) - 1 + ((time_t) 1 << atime_shift))
    : -1);
 static int	longest;
-static char *	progname;
+static char const *progname;
 static bool	warned;
 static bool	errout;
 
@@ -131,7 +131,7 @@ sumsize(size_t a, size_t b)
 {
   size_t sum = a + b;
   if (sum < a) {
-    fprintf(stderr, "%s: size overflow\n", progname);
+    fprintf(stderr, _("%s: size overflow\n"), progname);
     exit(EXIT_FAILURE);
   }
   return sum;
@@ -228,33 +228,56 @@ mktime_z(timezone_t tz, struct tm *tmp)
 static timezone_t
 tzalloc(char const *val)
 {
+# if HAVE_SETENV
+  if (setenv("TZ", val, 1) != 0) {
+    perror("setenv");
+    exit(EXIT_FAILURE);
+  }
+  tzset();
+  return &optarg;  /* Any valid non-null char ** will do.  */
+# else
+  enum { TZeqlen = 3 };
+  static char const TZeq[TZeqlen] = "TZ=";
   static char **fakeenv;
-  char **env = fakeenv;
-  char *env0;
-  if (! env) {
-    char **e = environ;
-    int to;
+  static size_t fakeenv0size;
+  void *freeable = NULL;
+  char **env = fakeenv, **initial_environ;
+  size_t valsize = strlen(val) + 1;
+  if (fakeenv0size < valsize) {
+    char **e = environ, **to;
+    ptrdiff_t initial_nenvptrs;  /* Counting the trailing NULL pointer.  */
 
     while (*e++)
       continue;
-    env = xmalloc(sumsize(sizeof *environ,
-			  (e - environ) * sizeof *environ));
-    to = 1;
-    for (e = environ; (env[to] = *e); e++)
-      to += strncmp(*e, "TZ=", 3) != 0;
+    initial_nenvptrs = e - environ;
+    fakeenv0size = sumsize(valsize, valsize);
+    fakeenv0size = max(fakeenv0size, 64);
+    freeable = env;
+    fakeenv = env =
+      xmalloc(sumsize(sumsize(sizeof *environ,
+			      initial_nenvptrs * sizeof *environ),
+		      sumsize(TZeqlen, fakeenv0size)));
+    to = env + 1;
+    for (e = environ; (*to = *e); e++)
+      to += strncmp(*e, TZeq, TZeqlen) != 0;
+    env[0] = memcpy(to + 1, TZeq, TZeqlen);
   }
-  env0 = xmalloc(sumsize(sizeof "TZ=", strlen(val)));
-  env[0] = strcat(strcpy(env0, "TZ="), val);
-  environ = fakeenv = env;
+  memcpy(env[0] + TZeqlen, val, valsize);
+  initial_environ = environ;
+  environ = env;
   tzset();
-  return env;
+  free(freeable);
+  return initial_environ;
+# endif
 }
 
 static void
-tzfree(timezone_t env)
+tzfree(timezone_t initial_environ)
 {
-  environ = env + 1;
-  free(env[0]);
+# if !HAVE_SETENV
+  environ = initial_environ;
+  tzset();
+# endif
 }
 #endif /* ! USE_LOCALTIME_RZ */
 
@@ -266,9 +289,9 @@ gmtzinit(void)
   if (USE_LOCALTIME_RZ) {
     /* Try "GMT" first to find out whether this is one of the rare
        platforms where time_t counts leap seconds; this works due to
-       the "Link Etc/GMT GMT" line in the "etcetera" file.  If "GMT"
+       the "Zone GMT 0 - GMT" line in the "etcetera" file.  If "GMT"
        fails, fall back on "GMT0" which might be similar due to the
-       "Link Etc/GMT GMT0" line in the "backward" file, and which
+       "Link GMT GMT0" line in the "backward" file, and which
        should work on all POSIX platforms.  The rest of zdump does not
        use the "GMT" abbreviation that comes from this setting, so it
        is OK to use "GMT" here rather than the more-modern "UTC" which
@@ -435,12 +458,12 @@ main(int argc, char *argv[])
 	cuthitime = absolute_max_time;
 #if HAVE_GETTEXT
 	setlocale(LC_ALL, "");
-#ifdef TZ_DOMAINDIR
+# ifdef TZ_DOMAINDIR
 	bindtextdomain(TZ_DOMAIN, TZ_DOMAINDIR);
-#endif /* defined TEXTDOMAINDIR */
+# endif /* defined TEXTDOMAINDIR */
 	textdomain(TZ_DOMAIN);
 #endif /* HAVE_GETTEXT */
-	progname = argv[0];
+	progname = argv[0] ? argv[0] : "zdump";
 	for (i = 1; i < argc; ++i)
 		if (strcmp(argv[i], "--version") == 0) {
 			printf("zdump %s%s\n", PKGVERSION, TZVERSION);
@@ -533,7 +556,7 @@ main(int argc, char *argv[])
 	for (i = optind; i < argc; i++) {
 	  size_t arglen = strlen(argv[i]);
 	  if (longest < arglen)
-	    longest = arglen < INT_MAX ? arglen : INT_MAX;
+	    longest = min(arglen, INT_MAX);
 	}
 
 	for (i = optind; i < argc; ++i) {
@@ -798,6 +821,7 @@ show(timezone_t tz, char *zone, time_t t, bool v)
 		gmtmp = my_gmtime_r(&t, &gmtm);
 		if (gmtmp == NULL) {
 			printf(tformat(), t);
+			printf(_(" (gmtime failed)"));
 		} else {
 			dumptime(gmtmp);
 			printf(" UT");
@@ -805,8 +829,11 @@ show(timezone_t tz, char *zone, time_t t, bool v)
 		printf(" = ");
 	}
 	tmp = my_localtime_rz(tz, &t, &tm);
-	dumptime(tmp);
-	if (tmp != NULL) {
+	if (tmp == NULL) {
+		printf(tformat(), t);
+		printf(_(" (localtime failed)"));
+	} else {
+		dumptime(tmp);
 		if (*abbr(tmp) != '\0')
 			printf(" %s", abbr(tmp));
 		if (v) {
@@ -1119,12 +1146,29 @@ abbr(struct tm const *tmp)
 
 /*
 ** The code below can fail on certain theoretical systems;
-** it works on all known real-world systems as of 2004-12-30.
+** it works on all known real-world systems as of 2022-01-25.
 */
 
 static const char *
 tformat(void)
 {
+#if HAVE_GENERIC
+	/* C11-style _Generic is more likely to return the correct
+	   format when distinct types have the same size.  */
+	char const *fmt =
+	  _Generic(+ (time_t) 0,
+		   int: "%d", long: "%ld", long long: "%lld",
+		   unsigned: "%u", unsigned long: "%lu",
+		   unsigned long long: "%llu",
+		   default: NULL);
+	if (fmt)
+	  return fmt;
+	fmt = _Generic((time_t) 0,
+		       intmax_t: "%"PRIdMAX, uintmax_t: "%"PRIuMAX,
+		       default: NULL);
+	if (fmt)
+	  return fmt;
+#endif
 	if (0 > (time_t) -1) {		/* signed */
 		if (sizeof(time_t) == sizeof(intmax_t))
 			return "%"PRIdMAX;
@@ -1157,11 +1201,8 @@ dumptime(register const struct tm *timeptr)
 	};
 	register int		lead;
 	register int		trail;
+	int DIVISOR = 10;
 
-	if (timeptr == NULL) {
-		printf("NULL");
-		return;
-	}
 	/*
 	** The packaged localtime_rz and gmtime_r never put out-of-range
 	** values in tm_wday or tm_mon, but since this code might be compiled
@@ -1176,7 +1217,6 @@ dumptime(register const struct tm *timeptr)
 		 ? mon_name[timeptr->tm_mon] : "???"),
 		timeptr->tm_mday, timeptr->tm_hour,
 		timeptr->tm_min, timeptr->tm_sec);
-#define DIVISOR	10
 	trail = timeptr->tm_year % DIVISOR + TM_YEAR_BASE % DIVISOR;
 	lead = timeptr->tm_year / DIVISOR + TM_YEAR_BASE / DIVISOR +
 		trail / DIVISOR;

@@ -17,6 +17,15 @@
 ** Thank you!
 */
 
+/* Define true, false and bool if they don't work out of the box.  */
+#if __STDC_VERSION__ < 199901
+# define true 1
+# define false 0
+# define bool int
+#elif __STDC_VERSION__ < 202311
+# include <stdbool.h>
+#endif
+
 /*
 ** zdump has been made independent of the rest of the time
 ** conversion package to increase confidence in the verification it provides.
@@ -36,7 +45,7 @@
 */
 
 #ifndef HAVE_DECL_ASCTIME_R
-#define HAVE_DECL_ASCTIME_R 1
+# define HAVE_DECL_ASCTIME_R 1
 #endif
 
 #if !defined HAVE_GENERIC && defined __has_extension
@@ -54,61 +63,72 @@
 # define HAVE_GENERIC (201112 <= __STDC_VERSION__)
 #endif
 
+#if !defined HAVE_GETTEXT && defined __has_include
+# if __has_include(<libintl.h>)
+#  define HAVE_GETTEXT true
+# endif
+#endif
 #ifndef HAVE_GETTEXT
-#define HAVE_GETTEXT		0
-#endif /* !defined HAVE_GETTEXT */
+# define HAVE_GETTEXT false
+#endif
 
 #ifndef HAVE_INCOMPATIBLE_CTIME_R
-#define HAVE_INCOMPATIBLE_CTIME_R	0
+# define HAVE_INCOMPATIBLE_CTIME_R 0
 #endif
 
 #ifndef HAVE_LINK
-#define HAVE_LINK		1
+# define HAVE_LINK 1
 #endif /* !defined HAVE_LINK */
 
 #ifndef HAVE_MALLOC_ERRNO
-#define HAVE_MALLOC_ERRNO 1
+# define HAVE_MALLOC_ERRNO 1
 #endif
 
 #ifndef HAVE_POSIX_DECLS
-#define HAVE_POSIX_DECLS 1
+# define HAVE_POSIX_DECLS 1
 #endif
 
-#ifndef HAVE_STDBOOL_H
-#define HAVE_STDBOOL_H (199901 <= __STDC_VERSION__)
+#ifndef HAVE_SETENV
+# define HAVE_SETENV 1
 #endif
 
 #ifndef HAVE_STRDUP
-#define HAVE_STRDUP 1
+# define HAVE_STRDUP 1
 #endif
 
 #ifndef HAVE_STRTOLL
-#define HAVE_STRTOLL 1
+# define HAVE_STRTOLL 1
 #endif
 
 #ifndef HAVE_SYMLINK
-#define HAVE_SYMLINK		1
+# define HAVE_SYMLINK 1
 #endif /* !defined HAVE_SYMLINK */
 
+#if !defined HAVE_SYS_STAT_H && defined __has_include
+# if !__has_include(<sys/stat.h>)
+#  define HAVE_SYS_STAT_H false
+# endif
+#endif
 #ifndef HAVE_SYS_STAT_H
-#define HAVE_SYS_STAT_H		1
-#endif /* !defined HAVE_SYS_STAT_H */
+# define HAVE_SYS_STAT_H true
+#endif
 
+#if !defined HAVE_UNISTD_H && defined __has_include
+# if !__has_include(<unistd.h>)
+#  define HAVE_UNISTD_H false
+# endif
+#endif
 #ifndef HAVE_UNISTD_H
-#define HAVE_UNISTD_H		1
-#endif /* !defined HAVE_UNISTD_H */
-
-#ifndef HAVE_UTMPX_H
-#define HAVE_UTMPX_H		1
-#endif /* !defined HAVE_UTMPX_H */
+# define HAVE_UNISTD_H true
+#endif
 
 #ifndef NETBSD_INSPIRED
 # define NETBSD_INSPIRED 1
 #endif
 
 #if HAVE_INCOMPATIBLE_CTIME_R
-#define asctime_r _incompatible_asctime_r
-#define ctime_r _incompatible_ctime_r
+# define asctime_r _incompatible_asctime_r
+# define ctime_r _incompatible_ctime_r
 #endif /* HAVE_INCOMPATIBLE_CTIME_R */
 
 /* Enable tm_gmtoff, tm_zone, and environ on GNUish systems.  */
@@ -118,15 +138,17 @@
 /* Enable strtoimax on pre-C99 Solaris 11.  */
 #define __EXTENSIONS__ 1
 
-/* To avoid having 'stat' fail unnecessarily with errno == EOVERFLOW,
-   enable large files on GNUish systems ...  */
+/* On GNUish systems where time_t might be 32 or 64 bits, use 64.
+   On these platforms _FILE_OFFSET_BITS must also be 64; otherwise
+   setting _TIME_BITS to 64 does not work.  The code does not
+   otherwise rely on _FILE_OFFSET_BITS being 64, since it does not
+   use off_t or functions like 'stat' that depend on off_t.  */
 #ifndef _FILE_OFFSET_BITS
 # define _FILE_OFFSET_BITS 64
 #endif
-/* ... and on AIX ...  */
-#define _LARGE_FILES 1
-/* ... and enable large inode numbers on Mac OS X 10.5 and later.  */
-#define _DARWIN_USE_64_BIT_INODE 1
+#if !defined _TIME_BITS && _FILE_OFFSET_BITS == 64
+# define _TIME_BITS 64
+#endif
 
 /*
 ** Nested includes
@@ -157,7 +179,7 @@
 #undef tzalloc
 #undef tzfree
 
-#include <sys/types.h>	/* for time_t */
+#include <stddef.h>
 #include <string.h>
 #include <limits.h>	/* for CHAR_BIT et al. */
 #include <stdlib.h>
@@ -168,6 +190,9 @@
 # define EINVAL ERANGE
 #endif
 
+#ifndef ELOOP
+# define ELOOP EINVAL
+#endif
 #ifndef ENAMETOOLONG
 # define ENAMETOOLONG EINVAL
 #endif
@@ -182,11 +207,11 @@
 #endif
 
 #if HAVE_GETTEXT
-#include <libintl.h>
+# include <libintl.h>
 #endif /* HAVE_GETTEXT */
 
 #if HAVE_UNISTD_H
-#include <unistd.h>	/* for R_OK, and other POSIX goodness */
+# include <unistd.h> /* for R_OK, and other POSIX goodness */
 #endif /* HAVE_UNISTD_H */
 
 #ifndef HAVE_STRFTIME_L
@@ -222,7 +247,7 @@
 #endif
 
 #ifndef R_OK
-#define R_OK	4
+# define R_OK 4
 #endif /* !defined R_OK */
 
 /*
@@ -231,15 +256,18 @@
 ** previously-included files.  glibc 2.1 and Solaris 10 and later have
 ** stdint.h, even with pre-C99 compilers.
 */
+#if !defined HAVE_STDINT_H && defined __has_include
+# define HAVE_STDINT_H true /* C23 __has_include implies C99 stdint.h.  */
+#endif
 #ifndef HAVE_STDINT_H
-#define HAVE_STDINT_H \
+# define HAVE_STDINT_H \
    (199901 <= __STDC_VERSION__ \
-    || 2 < __GLIBC__ + (1 <= __GLIBC_MINOR__)	\
+    || 2 < __GLIBC__ + (1 <= __GLIBC_MINOR__) \
     || __CYGWIN__ || INTMAX_MAX)
 #endif /* !defined HAVE_STDINT_H */
 
 #if HAVE_STDINT_H
-#include <stdint.h>
+# include <stdint.h>
 #endif /* !HAVE_STDINT_H */
 
 #ifndef HAVE_INTTYPES_H
@@ -357,15 +385,8 @@ typedef unsigned long uintmax_t;
 # endif
 #endif
 
-#ifndef INT32_MAX
-#define INT32_MAX 0x7fffffff
-#endif /* !defined INT32_MAX */
-#ifndef INT32_MIN
-#define INT32_MIN (-1 - INT32_MAX)
-#endif /* !defined INT32_MIN */
-
 #ifndef SIZE_MAX
-#define SIZE_MAX ((size_t) -1)
+# define SIZE_MAX ((size_t) -1)
 #endif
 
 #if 3 <= __GNUC__
@@ -522,7 +543,22 @@ struct tm *localtime(time_t const *);
 struct tm *localtime_r(time_t const *restrict, struct tm *restrict);
 time_t mktime(struct tm *);
 time_t time(time_t *);
+time_t timegm(struct tm *);
 void tzset(void);
+#endif
+
+#ifndef HAVE_DECL_TIMEGM
+# if (202311 <= __STDC_VERSION__ \
+      || defined __GLIBC__ || defined __tm_zone /* musl */ \
+      || defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__ \
+      || (defined __APPLE__ && defined __MACH__))
+#  define HAVE_DECL_TIMEGM true
+# else
+#  define HAVE_DECL_TIMEGM false
+# endif
+#endif
+#if !HAVE_DECL_TIMEGM && !defined timegm
+time_t timegm(struct tm *);
 #endif
 
 #if !HAVE_DECL_ASCTIME_R && !defined asctime_r
@@ -561,9 +597,6 @@ extern long altzone;
 # if TZ_TIME_T || !defined offtime
 struct tm *offtime(time_t const *, long);
 # endif
-# if TZ_TIME_T || !defined timegm
-time_t timegm(struct tm *);
-# endif
 # if TZ_TIME_T || !defined timelocal
 time_t timelocal(struct tm *);
 # endif
@@ -581,6 +614,7 @@ time_t posix2time(time_t);
 /* Infer TM_ZONE on systems where this information is known, but suppress
    guessing if NO_TM_ZONE is defined.  Similarly for TM_GMTOFF.  */
 #if (defined __GLIBC__ \
+     || defined __tm_zone /* musl */ \
      || defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__ \
      || (defined __APPLE__ && defined __MACH__))
 # if !defined TM_GMTOFF && !defined NO_TM_GMTOFF
@@ -620,17 +654,14 @@ time_t time2posix_z(timezone_t, time_t) ATTRIBUTE_PURE;
 ** Finally, some convenience items.
 */
 
-#if HAVE_STDBOOL_H
-# include <stdbool.h>
-#else
-# define true 1
-# define false 0
-# define bool int
-#endif
-
 #define TYPE_BIT(type)	(sizeof(type) * CHAR_BIT)
 #define TYPE_SIGNED(type) (((type) -1) < 0)
 #define TWOS_COMPLEMENT(t) ((t) ~ (t) 0 < 0)
+
+/* Minimum and maximum of two values.  Use lower case to avoid
+   naming clashes with standard include files.  */
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
 /* Max and min values of the integer type T, of which only the bottom
    B bits are used, and where the highest-order used bit is considered
@@ -689,21 +720,30 @@ time_t time2posix_z(timezone_t, time_t) ATTRIBUTE_PURE;
 # define INITIALIZE(x)
 #endif
 
+/* Whether memory access must strictly follow the C standard.
+   If 0, it's OK to read uninitialized storage so long as the value is
+   not relied upon.  Defining it to 0 lets mktime access parts of
+   struct tm that might be uninitialized, as a heuristic when the
+   standard doesn't say what to return and when tm_gmtoff can help
+   mktime likely infer a better value.  */
 #ifndef UNINIT_TRAP
 # define UNINIT_TRAP 0
 #endif
 
 #ifdef DEBUG
-# define UNREACHABLE() abort()
-#elif 4 < __GNUC__ + (5 <= __GNUC_MINOR__)
-# define UNREACHABLE() __builtin_unreachable()
-#elif defined __has_builtin
-# if __has_builtin(__builtin_unreachable)
-#  define UNREACHABLE() __builtin_unreachable()
+# undef unreachable
+# define unreachable() abort()
+#elif !defined unreachable
+# ifdef __has_builtin
+#  if __has_builtin(__builtin_unreachable)
+#   define unreachable() __builtin_unreachable()
+#  endif
+# elif 4 < __GNUC__ + (5 <= __GNUC_MINOR__)
+#  define unreachable() __builtin_unreachable()
 # endif
-#endif
-#ifndef UNREACHABLE
-# define UNREACHABLE() ((void) 0)
+# ifndef unreachable
+#  define unreachable() ((void) 0)
+# endif
 #endif
 
 /*
@@ -731,47 +771,55 @@ char *ctime_r(time_t const *, char *);
 
 /* Handy macros that are independent of tzfile implementation.  */
 
-#define SECSPERMIN	60
-#define MINSPERHOUR	60
-#define HOURSPERDAY	24
-#define DAYSPERWEEK	7
-#define DAYSPERNYEAR	365
-#define DAYSPERLYEAR	366
-#define SECSPERHOUR	(SECSPERMIN * MINSPERHOUR)
-#define SECSPERDAY	((int_fast32_t) SECSPERHOUR * HOURSPERDAY)
-#define MONSPERYEAR	12
+enum {
+  SECSPERMIN = 60,
+  MINSPERHOUR = 60,
+  SECSPERHOUR = SECSPERMIN * MINSPERHOUR,
+  HOURSPERDAY = 24,
+  DAYSPERWEEK = 7,
+  DAYSPERNYEAR = 365,
+  DAYSPERLYEAR = DAYSPERNYEAR + 1,
+  MONSPERYEAR = 12,
+  YEARSPERREPEAT = 400	/* years before a Gregorian repeat */
+};
 
-#define YEARSPERREPEAT		400	/* years before a Gregorian repeat */
+#define SECSPERDAY	((int_fast32_t) SECSPERHOUR * HOURSPERDAY)
+
 #define DAYSPERREPEAT		((int_fast32_t) 400 * 365 + 100 - 4 + 1)
 #define SECSPERREPEAT		((int_fast64_t) DAYSPERREPEAT * SECSPERDAY)
 #define AVGSECSPERYEAR		(SECSPERREPEAT / YEARSPERREPEAT)
 
-#define TM_SUNDAY	0
-#define TM_MONDAY	1
-#define TM_TUESDAY	2
-#define TM_WEDNESDAY	3
-#define TM_THURSDAY	4
-#define TM_FRIDAY	5
-#define TM_SATURDAY	6
+enum {
+  TM_SUNDAY,
+  TM_MONDAY,
+  TM_TUESDAY,
+  TM_WEDNESDAY,
+  TM_THURSDAY,
+  TM_FRIDAY,
+  TM_SATURDAY
+};
 
-#define TM_JANUARY	0
-#define TM_FEBRUARY	1
-#define TM_MARCH	2
-#define TM_APRIL	3
-#define TM_MAY		4
-#define TM_JUNE		5
-#define TM_JULY		6
-#define TM_AUGUST	7
-#define TM_SEPTEMBER	8
-#define TM_OCTOBER	9
-#define TM_NOVEMBER	10
-#define TM_DECEMBER	11
+enum {
+  TM_JANUARY,
+  TM_FEBRUARY,
+  TM_MARCH,
+  TM_APRIL,
+  TM_MAY,
+  TM_JUNE,
+  TM_JULY,
+  TM_AUGUST,
+  TM_SEPTEMBER,
+  TM_OCTOBER,
+  TM_NOVEMBER,
+  TM_DECEMBER
+};
 
-#define TM_YEAR_BASE	1900
-#define TM_WDAY_BASE	TM_MONDAY
-
-#define EPOCH_YEAR	1970
-#define EPOCH_WDAY	TM_THURSDAY
+enum {
+  TM_YEAR_BASE = 1900,
+  TM_WDAY_BASE = TM_MONDAY,
+  EPOCH_YEAR = 1970,
+  EPOCH_WDAY = TM_THURSDAY
+};
 
 #define isleap(y) (((y) % 4) == 0 && (((y) % 100) != 0 || ((y) % 400) == 0))
 
