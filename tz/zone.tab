@@ -121,9 +121,8 @@ CA	+744144-0944945	America/Resolute	Central - NU (Resolute)
 CA	+624900-0920459	America/Rankin_Inlet	Central - NU (central)
 CA	+5024-10439	America/Regina	CST - SK (most areas)
 CA	+5017-10750	America/Swift_Current	CST - SK (midwest)
-CA	+5333-11328	America/Edmonton	Mountain - AB; BC (E); SK (W)
+CA	+5333-11328	America/Edmonton	Mountain - AB; BC (E); NT (E); SK (W)
 CA	+690650-1050310	America/Cambridge_Bay	Mountain - NU (west)
-CA	+6227-11421	America/Yellowknife	Mountain - NT (central)
 CA	+682059-1334300	America/Inuvik	Mountain - NT (west)
 CA	+4906-11631	America/Creston	MST - BC (Creston)
 CA	+5546-12014	America/Dawson_Creek	MST - BC (Dawson Cr, Ft St John)
@@ -282,7 +281,8 @@ MX	+2058-08937	America/Merida	Campeche, Yucatan
 MX	+2540-10019	America/Monterrey	Durango; Coahuila, Nuevo Leon, Tamaulipas (most areas)
 MX	+2550-09730	America/Matamoros	Coahuila, Nuevo Leon, Tamaulipas (US border)
 MX	+2838-10605	America/Chihuahua	Chihuahua (most areas)
-MX	+2934-10425	America/Ojinaga	Chihuahua (US border)
+MX	+3144-10629	America/Ciudad_Juarez	Chihuahua (US border - west)
+MX	+2934-10425	America/Ojinaga	Chihuahua (US border - east)
 MX	+2313-10625	America/Mazatlan	Baja California Sur, Nayarit (most areas), Sinaloa
 MX	+2048-10515	America/Bahia_Banderas	Bahia de Banderas
 MX	+2904-11058	America/Hermosillo	Sonora

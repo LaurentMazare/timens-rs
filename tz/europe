@@ -1103,7 +1103,29 @@ Zone Atlantic/Faroe	-0:27:04 -	LMT	1908 Jan 11 # Tórshavn
 # "National Park" by Executive Order:
 # http://naalakkersuisut.gl/~/media/Nanoq/Files/Attached%20Files/Engelske-tekster/Legislation/Executive%20Order%20National%20Park.rtf
 # It is their only National Park.
+
+# From Jonas Nyrup (2022-11-24):
+# On last Saturday in October 2023 when DST ends America/Nuuk will switch
+# from -03/-02 to -02/-01
+# https://sermitsiaq.ag/forslagtidsforskel-danmark-mindskes-sommertid-beholdes
+# ...
+# https://sermitsiaq.ag/groenland-skifte-tidszone-trods-bekymringer
 #
+# From Jürgen Appel (2022-11-25):
+# https://ina.gl/samlinger/oversigt-over-samlinger/samling/dagsordener/dagsorden.aspx?lang=da&day=24-11-2022
+#
+# From Thomas M. Steenholdt (2022-12-02):
+# - The bill to move America/Nuuk from UTC-03 to UTC-02 passed.
+# - The bill to stop observing DST did not (Greenland will stop observing DST
+#   when EU does).
+# Details on the implementation are here (section 6):
+# https://ina.gl/dvd/EM%202022/pdf/media/2553529/pkt17_em2022_tidens_bestemmelse_bem_da.pdf
+# This is how the change will be implemented:
+# 1. The shift *to* DST in 2023 happens as normal.
+# 2. The shift *from* DST in 2023 happens as normal, but coincides with the
+#    shift to UTC-02 normaltime (people will not change their clocks here).
+# 3. After this, DST is still observed, but as -02/-01 instead of -03/-02.
+
 # Rule	NAME	FROM	TO	-	IN	ON	AT	SAVE	LETTER/S
 Rule	Thule	1991	1992	-	Mar	lastSun	2:00	1:00	D
 Rule	Thule	1991	1992	-	Sep	lastSun	2:00	0	S
@@ -1126,7 +1148,8 @@ Zone America/Scoresbysund -1:27:52 -	LMT	1916 Jul 28 # Ittoqqortoormiit
 			-1:00	EU	-01/+00
 Zone America/Nuuk	-3:26:56 -	LMT	1916 Jul 28 # Godthåb
 			-3:00	-	-03	1980 Apr  6  2:00
-			-3:00	EU	-03/-02
+			-3:00	EU	-03/-02	2023 Oct 29  1:00u
+			-2:00	EU	-02/-01
 Zone America/Thule	-4:35:08 -	LMT	1916 Jul 28 # Pituffik
 			-4:00	Thule	A%sT
 
