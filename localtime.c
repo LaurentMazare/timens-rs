@@ -186,9 +186,14 @@ static int		lcl_is_set;
 **	ctime, gmtime, localtime] return values in one of two static
 **	objects: a broken-down time structure and an array of char.
 ** Thanks to Paul Eggert for noting this.
+**
+** This requirement was removed in C99, so support it only if requested,
+** as support is more likely to lead to bugs in badly-written programs.
 */
 
+#if SUPPORT_C89
 static struct tm	tm;
+#endif
 
 #if 2 <= HAVE_TZNAME + TZ_TIME_T
 char *			tzname[2] = {
@@ -425,8 +430,7 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 #endif
 	if (!doaccess) {
 		char const *dot;
-		size_t namelen = strlen(name);
-		if (sizeof lsp->fullname - sizeof tzdirslash <= namelen)
+		if (sizeof lsp->fullname - sizeof tzdirslash <= strlen(name))
 		  return ENAMETOOLONG;
 
 		/* Create a string "TZDIR/NAME".  Using sprintf here
@@ -839,7 +843,7 @@ is_digit(char c)
 ** Return a pointer to that character.
 */
 
-static ATTRIBUTE_PURE const char *
+ATTRIBUTE_REPRODUCIBLE static const char *
 getzname(register const char *strp)
 {
 	register char	c;
@@ -860,7 +864,7 @@ getzname(register const char *strp)
 ** We don't do any checking here; checking is done later in common-case code.
 */
 
-static ATTRIBUTE_PURE const char *
+ATTRIBUTE_REPRODUCIBLE static const char *
 getqzname(register const char *strp, const int delim)
 {
 	register int	c;
@@ -1120,13 +1124,11 @@ tzparse(const char *name, struct state *sp, struct state *basep)
 {
 	const char *			stdname;
 	const char *			dstname;
-	size_t				stdlen;
-	size_t				dstlen;
-	size_t				charcnt;
 	int_fast32_t			stdoffset;
 	int_fast32_t			dstoffset;
 	register char *			cp;
 	register bool			load_ok;
+	ptrdiff_t stdlen, dstlen, charcnt;
 	time_t atlo = TIME_T_MIN, leaplo = TIME_T_MIN;
 
 	stdname = name;
@@ -1568,6 +1570,14 @@ localsub(struct state const *sp, time_t const *timep, int_fast32_t setname,
 					return NULL;	/* "cannot happen" */
 			result = localsub(sp, &newt, setname, tmp);
 			if (result) {
+#if defined ckd_add && defined ckd_sub
+				if (t < sp->ats[0]
+				    ? ckd_sub(&result->tm_year,
+					      result->tm_year, years)
+				    : ckd_add(&result->tm_year,
+					      result->tm_year, years))
+				  return NULL;
+#else
 				register int_fast64_t newy;
 
 				newy = result->tm_year;
@@ -1577,6 +1587,7 @@ localsub(struct state const *sp, time_t const *timep, int_fast32_t setname,
 				if (! (INT_MIN <= newy && newy <= INT_MAX))
 					return NULL;
 				result->tm_year = newy;
+#endif
 			}
 			return result;
 	}
@@ -1642,6 +1653,9 @@ localtime_tzset(time_t const *timep, struct tm *tmp, bool setname)
 struct tm *
 localtime(const time_t *timep)
 {
+#if !SUPPORT_C89
+  static struct tm tm;
+#endif
   return localtime_tzset(timep, &tm, true);
 }
 
@@ -1656,8 +1670,8 @@ localtime_r(const time_t *timep, struct tm *tmp)
 */
 
 static struct tm *
-gmtsub(struct state const *sp, time_t const *timep, int_fast32_t offset,
-       struct tm *tmp)
+gmtsub(ATTRIBUTE_MAYBE_UNUSED struct state const *sp, time_t const *timep,
+       int_fast32_t offset, struct tm *tmp)
 {
 	register struct tm *	result;
 
@@ -1688,19 +1702,26 @@ gmtime_r(const time_t *timep, struct tm *tmp)
 struct tm *
 gmtime(const time_t *timep)
 {
+#if !SUPPORT_C89
+  static struct tm tm;
+#endif
   return gmtime_r(timep, &tm);
 }
 
-#ifdef STD_INSPIRED
+#if STD_INSPIRED
 
 struct tm *
 offtime(const time_t *timep, long offset)
 {
   gmtcheck();
+
+#if !SUPPORT_C89
+  static struct tm tm;
+#endif
   return gmtsub(gmtptr, timep, offset, &tm);
 }
 
-#endif /* defined STD_INSPIRED */
+#endif
 
 /*
 ** Return the number of leap years through the end of the given year
@@ -1786,6 +1807,12 @@ timesub(const time_t *timep, int_fast32_t offset,
 		y = newy;
 	}
 
+#ifdef ckd_add
+	if (ckd_add(&tmp->tm_year, y, -TM_YEAR_BASE)) {
+	  errno = EOVERFLOW;
+	  return NULL;
+	}
+#else
 	if (!TYPE_SIGNED(time_t) && y < TM_YEAR_BASE) {
 	  int signed_y = y;
 	  tmp->tm_year = signed_y - TM_YEAR_BASE;
@@ -1796,6 +1823,7 @@ timesub(const time_t *timep, int_fast32_t offset,
 	  errno = EOVERFLOW;
 	  return NULL;
 	}
+#endif
 	tmp->tm_yday = idays;
 	/*
 	** The "extra" mods below avoid overflow problems.
@@ -1829,27 +1857,6 @@ timesub(const time_t *timep, int_fast32_t offset,
 	return tmp;
 }
 
-char *
-ctime(const time_t *timep)
-{
-/*
-** Section 4.12.3.2 of X3.159-1989 requires that
-**	The ctime function converts the calendar time pointed to by timer
-**	to local time in the form of a string. It is equivalent to
-**		asctime(localtime(timer))
-*/
-  struct tm *tmp = localtime(timep);
-  return tmp ? asctime(tmp) : NULL;
-}
-
-char *
-ctime_r(const time_t *timep, char *buf)
-{
-  struct tm mytm;
-  struct tm *tmp = localtime_r(timep, &mytm);
-  return tmp ? asctime_r(tmp, buf) : NULL;
-}
-
 /*
 ** Adapted from code provided by Robert Elz, who writes:
 **	The "best" way to do mktime I think is based on an idea of Bob
@@ -1870,6 +1877,9 @@ ctime_r(const time_t *timep, char *buf)
 static bool
 increment_overflow(int *ip, int j)
 {
+#ifdef ckd_add
+	return ckd_add(ip, *ip, j);
+#else
 	register int const	i = *ip;
 
 	/*
@@ -1882,22 +1892,30 @@ increment_overflow(int *ip, int j)
 		return true;
 	*ip += j;
 	return false;
+#endif
 }
 
 static bool
 increment_overflow32(int_fast32_t *const lp, int const m)
 {
+#ifdef ckd_add
+	return ckd_add(lp, *lp, m);
+#else
 	register int_fast32_t const	l = *lp;
 
 	if ((l >= 0) ? (m > INT_FAST32_MAX - l) : (m < INT_FAST32_MIN - l))
 		return true;
 	*lp += m;
 	return false;
+#endif
 }
 
 static bool
 increment_overflow_time(time_t *tp, int_fast32_t j)
 {
+#ifdef ckd_add
+	return ckd_add(tp, *tp, j);
+#else
 	/*
 	** This is like
 	** 'if (! (TIME_T_MIN <= *tp + j && *tp + j <= TIME_T_MAX)) ...',
@@ -1909,6 +1927,7 @@ increment_overflow_time(time_t *tp, int_fast32_t j)
 		return true;
 	*tp += j;
 	return false;
+#endif
 }
 
 static bool
@@ -1954,7 +1973,7 @@ tmcomp(register const struct tm *const atmp,
 /* Copy to *DEST from *SRC.  Copy only the members needed for mktime,
    as other members might not be initialized.  */
 static void
-mktmcpy(struct tm *dest, struct tm *const src)
+mktmcpy(struct tm *dest, struct tm const *src)
 {
   dest->tm_sec = src->tm_sec;
   dest->tm_min = src->tm_min;
@@ -2032,14 +2051,19 @@ time2sub(struct tm *const tmp,
 				return WRONG;
 		}
 	}
+#ifdef ckd_add
+	if (ckd_add(&yourtm.tm_year, y, -TM_YEAR_BASE))
+	  return WRONG;
+#else
 	if (increment_overflow32(&y, -TM_YEAR_BASE))
 		return WRONG;
 	if (! (INT_MIN <= y && y <= INT_MAX))
 		return WRONG;
 	yourtm.tm_year = y;
+#endif
 	if (yourtm.tm_sec >= 0 && yourtm.tm_sec < SECSPERMIN)
 		saved_seconds = 0;
-	else if (y + TM_YEAR_BASE < EPOCH_YEAR) {
+	else if (yourtm.tm_year < EPOCH_YEAR - TM_YEAR_BASE) {
 		/*
 		** We can't set tm_sec to 0, because that might push the
 		** time below the minimum representable time.
@@ -2295,7 +2319,7 @@ mktime(struct tm *tmp)
   return t;
 }
 
-#ifdef STD_INSPIRED
+#if STD_INSPIRED
 time_t
 timelocal(struct tm *tmp)
 {
@@ -2347,7 +2371,7 @@ leapcorr(struct state const *sp, time_t t)
 ** XXX--is the below the right way to conditionalize??
 */
 
-#ifdef STD_INSPIRED
+#if STD_INSPIRED
 
 /* NETBSD_INSPIRED_EXTERN functions are exported to callers if
    NETBSD_INSPIRED is defined, and are private otherwise.  */
@@ -2432,7 +2456,7 @@ posix2time(time_t t)
   return t;
 }
 
-#endif /* defined STD_INSPIRED */
+#endif /* STD_INSPIRED */
 
 #if TZ_TIME_T
 

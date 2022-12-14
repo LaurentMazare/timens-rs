@@ -211,7 +211,7 @@ LDLIBS=
 #  -DHAVE_DECL_ENVIRON if <unistd.h> declares 'environ'
 #  -DHAVE_DECL_TIMEGM=0 if <time.h> does not declare timegm
 #  -DHAVE_DIRECT_H if mkdir needs <direct.h> (MS-Windows)
-#  -DHAVE_GENERIC=0 if _Generic does not work*
+#  -DHAVE__GENERIC=0 if _Generic does not work*
 #  -DHAVE_GETRANDOM if getrandom works (e.g., GNU/Linux),
 #	-DHAVE_GETRANDOM=0 to avoid using getrandom
 #  -DHAVE_GETTEXT if gettext works (e.g., GNU/Linux, FreeBSD, Solaris),
@@ -220,7 +220,7 @@ LDLIBS=
 #  -DHAVE_INCOMPATIBLE_CTIME_R if your system's time.h declares
 #	ctime_r and asctime_r incompatibly with the POSIX standard
 #	(Solaris when _POSIX_PTHREAD_SEMANTICS is not defined).
-#  -DHAVE_INTTYPES_H=0 if <inttypes.h> does not work*
+#  -DHAVE_INTTYPES_H=0 if <inttypes.h> does not work*+
 #  -DHAVE_LINK=0 if your system lacks a link function
 #  -DHAVE_LOCALTIME_R=0 if your system lacks a localtime_r function
 #  -DHAVE_LOCALTIME_RZ=0 if you do not want zdump to use localtime_rz
@@ -229,20 +229,24 @@ LDLIBS=
 #  -DHAVE_POSIX_DECLS=0 if your system's include files do not declare
 #	functions like 'link' or variables like 'tzname' required by POSIX
 #  -DHAVE_SETENV=0 if your system lacks the setenv function
-#  -DHAVE_SNPRINTF=0 if your system lacks the snprintf function
-#  -DHAVE_STDINT_H=0 if <stdint.h> does not work*
+#  -DHAVE_SNPRINTF=0 if your system lacks the snprintf function+
+#  -DHAVE_STDCKDINT_H=0 if neither <stdckdint.h> nor substitutes like
+#	__builtin_add_overflow work*
+#  -DHAVE_STDINT_H=0 if <stdint.h> does not work*+
 #  -DHAVE_STRFTIME_L if <time.h> declares locale_t and strftime_l
 #  -DHAVE_STRDUP=0 if your system lacks the strdup function
-#  -DHAVE_STRTOLL=0 if your system lacks the strtoll function
+#  -DHAVE_STRTOLL=0 if your system lacks the strtoll function+
 #  -DHAVE_SYMLINK=0 if your system lacks the symlink function
 #  -DHAVE_SYS_STAT_H=0 if <sys/stat.h> does not work*
 #  -DHAVE_TZSET=0 if your system lacks a tzset function
 #  -DHAVE_UNISTD_H=0 if <unistd.h> does not work*
 #  -DHAVE_UTMPX_H=0 if <utmpx.h> does not work*
 #  -Dlocale_t=XXX if your system uses XXX instead of locale_t
+#  -DPORT_TO_C89 if tzcode should also run on C89 platforms+
 #  -DRESERVE_STD_EXT_IDS if your platform reserves standard identifiers
 #	with external linkage, e.g., applications cannot define 'localtime'.
 #  -Dssize_t=long on hosts like MS-Windows that lack ssize_t
+#  -DSUPPORT_C89 if the tzcode library should support C89 callers+
 #  -DSUPPRESS_TZDIR to not prepend TZDIR to file names; this has
 #	security implications and is not recommended for general use
 #  -DTHREAD_SAFE to make localtime.c thread-safe, as POSIX requires;
@@ -271,6 +275,8 @@ LDLIBS=
 #  $(GCC_DEBUG_FLAGS) if you are using recent GCC and want lots of checking
 #
 # * Options marked "*" can be omitted if your compiler is C23 compatible.
+# * Options marked "+" are obsolescent and are planned to be removed
+#   once the code assumes C99 or later.
 #
 # Select instrumentation via "make GCC_INSTRUMENT='whatever'".
 GCC_INSTRUMENT = \
@@ -285,7 +291,7 @@ GCC_DEBUG_FLAGS = -DGCC_LINT -g3 -O3 -fno-common \
   -Wdeclaration-after-statement -Wdouble-promotion \
   -Wduplicated-branches -Wduplicated-cond \
   -Wformat=2 -Wformat-overflow=2 -Wformat-signedness -Wformat-truncation \
-  -Winit-self -Wlogical-op \
+  -Wimplicit-fallthrough=5 -Winit-self -Wlogical-op \
   -Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
   -Wnull-dereference \
   -Wold-style-definition -Woverlength-strings -Wpointer-arith \
@@ -298,7 +304,7 @@ GCC_DEBUG_FLAGS = -DGCC_LINT -g3 -O3 -fno-common \
   -Wtrampolines -Wundef -Wuninitialized -Wunused-macros -Wuse-after-free=3 \
   -Wvariadic-macros -Wvla -Wwrite-strings \
   -Wno-address -Wno-format-nonliteral -Wno-sign-compare \
-  -Wno-type-limits -Wno-unused-parameter
+  -Wno-type-limits
 #
 # If your system has a "GMT offset" field in its "struct tm"s
 # (or if you decide to add such a field in your system's "time.h" file),
@@ -361,7 +367,7 @@ GCC_DEBUG_FLAGS = -DGCC_LINT -g3 -O3 -fno-common \
 #	-DNETBSD_INSPIRED=0
 # to the end of the "CFLAGS=" line.  Otherwise, the functions
 # "localtime_rz", "mktime_z", "tzalloc", and "tzfree" are added to the
-# time library, and if STD_INSPIRED is also defined the functions
+# time library, and if STD_INSPIRED is also defined to nonzero the functions
 # "posix2time_z" and "time2posix_z" are added as well.
 # The functions ending in "_z" (or "_rz") are like their unsuffixed
 # (or suffixed-by-"_r") counterparts, except with an extra first

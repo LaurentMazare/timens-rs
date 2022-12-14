@@ -1,10 +1,69 @@
 News for the tz database
 
-  Briefly:
-    Fix some pre-1996 timestamps in northern Canada
-    C23 timegm now supported by default
-
 Unreleased, experimental changes
+
+  Briefly:
+    Much of Greenland still uses DST from 2024 on.
+    America/Yellowknife now links to America/Edmonton.
+    The code now defaults to C99 or later.
+    Fix use of C23 attributes.
+
+  Changes to future timestamps
+
+    Much of Greenland, represented by America/Nuuk, will continue to
+    observe DST using European Union rules.  When combined with
+    Greenland's decision not to change the clocks in fall 2023,
+    America/Nuuk therefore changes from -03/-02 to -02/-01 effective
+    2023-10-29 at 01:00 UTC.  (Thanks to Thomas M. Steenholdt.)
+    This change from 2022g doesn't affect timestamps until 2024-03-30,
+    and doesn't affect tm_isdst until 2023-03-25.
+
+  Changes to past timestamps
+
+    America/Yellowknife has changed from a Zone to a backward
+    compatibility Link, as it no longer differs from America/Edmonton
+    since 1970.  (Thanks to Almaz Mingaleev.)  This affects some
+    pre-1948 timestamps.  The old data are now in 'backzone'.
+
+  Changes to code
+
+    The code by default is now designed for C99 or later.  To build in
+    a C89 environment, compile with -DPORT_TO_C89.  To support C89
+    callers of the tzcode library, compile with -DSUPPORT_C89.  The
+    two new macros are transitional aids planned to be removed in a
+    future version, when C99 or later will be required.
+
+    On C23-compatible platforms tzcode no longer uses syntax like
+    'static [[noreturn]] void usage(void);'.  Instead, it uses
+    '[[noreturn]] static void usage(void);' as strict C23 requires.
+    (Problem reported by Houge Langley.)
+
+
+Release 2022g - 2022-11-29 08:58:31 -0800
+
+  Briefly:
+    The northern edge of Chihuahua changes to US timekeeping.
+    Much of Greenland stops changing clocks after March 2023.
+    Fix some pre-1996 timestamps in northern Canada.
+    C89 is now deprecated; please use C99 or later.
+    Portability fixes for AIX, libintl, MS-Windows, musl, z/OS
+    In C code, use more C23 features if available.
+    C23 timegm now supported by default
+    Fixes for unlikely integer overflows
+
+  Changes to future timestamps
+
+    In the Mexican state of Chihuahua, the border strip near the US
+    will change to agree with nearby US locations on 2022-11-30.
+    The strip's western part, represented by Ciudad Juárez, switches
+    from -06 all year to -07/-06 with US DST rules, like El Paso, TX.
+    The eastern part, represented by Ojinaga, will observe US DST next
+    year, like Presidio, TX.  (Thanks to Heitor David Pinto.)
+    A new Zone America/Ciudad_Juarez splits from America/Ojinaga.
+
+    Much of Greenland, represented by America/Nuuk, stops observing
+    winter time after March 2023, so its daylight saving time becomes
+    standard time.  (Thanks to Jonas Nyrup and Jürgen Appel.)
 
   Changes to past timestamps
 
@@ -21,7 +80,19 @@ Unreleased, experimental changes
 
       Whitehorse moved from -09 to -08 on 1966-02-27, not 1967-05-28.
 
+    Colombia's 1993 fallback was 02-06 24:00, not 04-04 00:00.
+    (Thanks to Alois Treindl.)
+
+    Singapore's 1981-12-31 change was at 16:00 UTC (23:30 local time),
+    not 24:00 local time.  (Thanks to Geoff Clare via Robert Elz.)
+
   Changes to code
+
+    Although tzcode still works with C89, bugs found in recent routine
+    maintenance indicate that bitrot has set in and that in practice
+    C89 is no longer used to build tzcode.  As it is a maintenance
+    burden, support for C89 is planned to be removed soon.  Instead,
+    please use compilers compatible with C99, C11, C17, or C23.
 
     timegm, which tzcode implemented in 1989, will finally be
     standardized 34 years later as part of C23, so timegm is now
@@ -42,6 +113,10 @@ Unreleased, experimental changes
     Port mktime and strftime to debugging platforms where accessing
     uninitialized data has undefined behavior (strftime problem
     reported by Robert Elz).
+
+    Check more carefully for unlikely integer overflows, preferring
+    C23 <stdckdint.h> to overflow checking by hand, as the latter has
+    had obscure bugs.
 
   Changes to build procedure
 

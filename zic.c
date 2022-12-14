@@ -34,6 +34,9 @@ static zic_t const
 # define ZIC_MAX_ABBR_LEN_WO_WARN 6
 #endif /* !defined ZIC_MAX_ABBR_LEN_WO_WARN */
 
+/* An upper bound on how much a format might grow due to concatenation.  */
+enum { FORMAT_LEN_GROWTH_BOUND = 5 };
+
 #ifdef HAVE_DIRECT_H
 # include <direct.h>
 # include <io.h>
@@ -63,13 +66,10 @@ static zic_t const
 # define MKDIR_UMASK 0755
 #endif
 
-/* The maximum ptrdiff_t value, for pre-C99 platforms.  */
-#ifndef PTRDIFF_MAX
-static ptrdiff_t const PTRDIFF_MAX = MAXVAL(ptrdiff_t, TYPE_BIT(ptrdiff_t));
-#endif
-
-/* The minimum alignment of a type, for pre-C23 platforms.  */
-#if __STDC_VERSION__ < 201112
+/* The minimum alignment of a type, for pre-C23 platforms.
+   The __SUNPRO_C test is because Oracle Developer Studio 12.6 lacks
+   <stdalign.h> even though __STDC_VERSION__ == 201112.  */
+#if __STDC_VERSION__ < 201112 || defined __SUNPRO_C
 # define alignof(type) offsetof(struct { char a; type b; }, b)
 #elif __STDC_VERSION__ < 202311
 # include <stdalign.h>
@@ -461,29 +461,54 @@ static char		roll[TZ_MAX_LEAPS];
 ** Memory allocation.
 */
 
-static _Noreturn void
+ATTRIBUTE_NORETURN static void
 memory_exhausted(const char *msg)
 {
 	fprintf(stderr, _("%s: Memory exhausted: %s\n"), progname, msg);
 	exit(EXIT_FAILURE);
 }
 
-static ATTRIBUTE_PURE size_t
-size_product(size_t nitems, size_t itemsize)
+ATTRIBUTE_NORETURN static void
+size_overflow(void)
 {
-	if (SIZE_MAX / itemsize < nitems)
-		memory_exhausted(_("size overflow"));
-	return nitems * itemsize;
+  memory_exhausted(_("size overflow"));
 }
 
-static ATTRIBUTE_PURE size_t
-align_to(size_t size, size_t alignment)
+ATTRIBUTE_REPRODUCIBLE static ptrdiff_t
+size_sum(size_t a, size_t b)
 {
-  size_t aligned_size = size + alignment - 1;
-  aligned_size -= aligned_size % alignment;
-  if (aligned_size < size)
-    memory_exhausted(_("alignment overflow"));
-  return aligned_size;
+#ifdef ckd_add
+  ptrdiff_t sum;
+  if (!ckd_add(&sum, a, b) && sum <= SIZE_MAX)
+    return sum;
+#else
+  ptrdiff_t sum_max = min(PTRDIFF_MAX, SIZE_MAX);
+  if (a <= sum_max && b <= sum_max - a)
+    return a + b;
+#endif
+  size_overflow();
+}
+
+ATTRIBUTE_REPRODUCIBLE static ptrdiff_t
+size_product(ptrdiff_t nitems, ptrdiff_t itemsize)
+{
+#ifdef ckd_mul
+  ptrdiff_t product;
+  if (!ckd_mul(&product, nitems, itemsize) && product <= SIZE_MAX)
+    return product;
+#else
+  ptrdiff_t nitems_max = min(PTRDIFF_MAX, SIZE_MAX) / itemsize;
+  if (nitems <= nitems_max)
+    return nitems * itemsize;
+#endif
+  size_overflow();
+}
+
+ATTRIBUTE_REPRODUCIBLE static ptrdiff_t
+align_to(ptrdiff_t size, ptrdiff_t alignment)
+{
+  ptrdiff_t lo_bits = alignment - 1, sum = size_sum(size, lo_bits);
+  return sum & ~lo_bits;
 }
 
 #if !HAVE_STRDUP
@@ -503,7 +528,7 @@ memcheck(void *ptr)
 	return ptr;
 }
 
-static void * ATTRIBUTE_MALLOC
+ATTRIBUTE_MALLOC static void *
 emalloc(size_t size)
 {
   return memcheck(malloc(size));
@@ -515,24 +540,38 @@ erealloc(void *ptr, size_t size)
   return memcheck(realloc(ptr, size));
 }
 
-static char * ATTRIBUTE_MALLOC
+ATTRIBUTE_MALLOC static char *
 estrdup(char const *str)
 {
   return memcheck(strdup(str));
 }
 
-static void *
-growalloc(void *ptr, size_t itemsize, ptrdiff_t nitems, ptrdiff_t *nitems_alloc)
+static ptrdiff_t
+grow_nitems_alloc(ptrdiff_t *nitems_alloc, ptrdiff_t itemsize)
 {
-	if (nitems < *nitems_alloc)
-		return ptr;
-	else {
-		ptrdiff_t amax = min(PTRDIFF_MAX, SIZE_MAX);
-		if ((amax - 1) / 3 * 2 < *nitems_alloc)
-			memory_exhausted(_("integer overflow"));
-		*nitems_alloc += (*nitems_alloc >> 1) + 1;
-		return erealloc(ptr, size_product(*nitems_alloc, itemsize));
-	}
+  ptrdiff_t addend = (*nitems_alloc >> 1) + 1;
+#if defined ckd_add && defined ckd_mul
+  ptrdiff_t product;
+  if (!ckd_add(nitems_alloc, *nitems_alloc, addend)
+      && !ckd_mul(&product, *nitems_alloc, itemsize) && product <= SIZE_MAX)
+    return product;
+#else
+  ptrdiff_t amax = min(PTRDIFF_MAX, SIZE_MAX);
+  if (*nitems_alloc <= ((amax - 1) / 3 * 2) / itemsize) {
+    *nitems_alloc += addend;
+    return *nitems_alloc * itemsize;
+  }
+#endif
+  memory_exhausted(_("integer overflow"));
+}
+
+static void *
+growalloc(void *ptr, ptrdiff_t itemsize, ptrdiff_t nitems,
+	  ptrdiff_t *nitems_alloc)
+{
+  return (nitems < *nitems_alloc
+	  ? ptr
+	  : erealloc(ptr, grow_nitems_alloc(nitems_alloc, itemsize)));
 }
 
 /*
@@ -571,7 +610,7 @@ eat(int fnum, lineno num)
 	eats(fnum, num, 0, -1);
 }
 
-static void ATTRIBUTE_FORMAT((printf, 1, 0))
+ATTRIBUTE_FORMAT((printf, 1, 0)) static void
 verror(const char *const string, va_list args)
 {
 	/*
@@ -589,7 +628,7 @@ verror(const char *const string, va_list args)
 	fprintf(stderr, "\n");
 }
 
-static void ATTRIBUTE_FORMAT((printf, 1, 2))
+ATTRIBUTE_FORMAT((printf, 1, 2)) static void
 error(const char *const string, ...)
 {
 	va_list args;
@@ -599,7 +638,7 @@ error(const char *const string, ...)
 	errors = true;
 }
 
-static void ATTRIBUTE_FORMAT((printf, 1, 2))
+ATTRIBUTE_FORMAT((printf, 1, 2)) static void
 warning(const char *const string, ...)
 {
 	va_list args;
@@ -629,7 +668,7 @@ close_file(FILE *stream, char const *dir, char const *name,
   }
 }
 
-static _Noreturn void
+ATTRIBUTE_NORETURN static void
 usage(FILE *stream, int status)
 {
   fprintf(stream,
@@ -1224,13 +1263,21 @@ get_rand_u64(void)
      the typical case where RAND_MAX is one less than a power of two.
      In other cases this code yields a sort-of-random number.  */
   {
-    uint_fast64_t
-      rand_max = RAND_MAX,
-      multiplier = rand_max + 1, /* It's OK if this overflows to 0.  */
+    uint_fast64_t rand_max = RAND_MAX,
+      nrand = rand_max < UINT_FAST64_MAX ? rand_max + 1 : 0,
+      rmod = INT_MAX < UINT_FAST64_MAX ? 0 : UINT_FAST64_MAX / nrand + 1,
       r = 0, rmax = 0;
+
     do {
-      uint_fast64_t rmax1 = rmax * multiplier + rand_max;
-      r = r * multiplier + rand();
+      uint_fast64_t rmax1 = rmax;
+      if (rmod) {
+	/* Avoid signed integer overflow on theoretical platforms
+	   where uint_fast64_t promotes to int.  */
+	rmax1 %= rmod;
+	r %= rmod;
+      }
+      rmax1 = nrand * rmax1 + rand_max;
+      r = nrand * r + rand();
       rmax = rmax < rmax1 ? rmax1 : UINT_FAST64_MAX;
     } while (rmax < UINT_FAST64_MAX);
 
@@ -1272,7 +1319,7 @@ random_dirent(char const **name, char **namealloc)
   uint_fast64_t unfair_min = - ((UINTMAX_MAX % base__6 + 1) % base__6);
 
   if (!dst) {
-    dst = emalloc(dirlen + prefixlen + suffixlen + 1);
+    dst = emalloc(size_sum(dirlen, prefixlen + suffixlen + 1));
     memcpy(dst, src, dirlen);
     memcpy(dst + dirlen, prefix, prefixlen);
     dst[dirlen + prefixlen + suffixlen] = '\0';
@@ -1351,19 +1398,20 @@ rename_dest(char *tempname, char const *name)
 static char *
 relname(char const *target, char const *linkname)
 {
-  size_t i, taillen, dotdotetcsize;
-  size_t dir_len = 0, dotdots = 0, linksize = SIZE_MAX;
+  size_t i, taillen, dir_len = 0, dotdots = 0;
+  ptrdiff_t dotdotetcsize, linksize = min(PTRDIFF_MAX, SIZE_MAX);
   char const *f = target;
   char *result = NULL;
   if (*linkname == '/') {
     /* Make F absolute too.  */
     size_t len = strlen(directory);
-    bool needslash = len && directory[len - 1] != '/';
-    linksize = len + needslash + strlen(target) + 1;
+    size_t lenslash = len + (len && directory[len - 1] != '/');
+    size_t targetsize = strlen(target) + 1;
+    linksize = size_sum(lenslash, targetsize);
     f = result = emalloc(linksize);
-    strcpy(result, directory);
+    memcpy(result, directory, len);
     result[len] = '/';
-    strcpy(result + len + needslash, target);
+    memcpy(result + lenslash, target, targetsize);
   }
   for (i = 0; f[i] && f[i] == linkname[i]; i++)
     if (f[i] == '/')
@@ -1371,7 +1419,7 @@ relname(char const *target, char const *linkname)
   for (; linkname[i]; i++)
     dotdots += linkname[i] == '/' && linkname[i - 1] != '/';
   taillen = strlen(f + dir_len);
-  dotdotetcsize = 3 * dotdots + taillen + 1;
+  dotdotetcsize = size_sum(size_product(dotdots, 3), taillen + 1);
   if (dotdotetcsize <= linksize) {
     if (!result)
       result = emalloc(dotdotetcsize);
@@ -1575,10 +1623,9 @@ associate(void)
 
 /* Read a text line from FP into BUF, which is of size BUFSIZE.
    Terminate it with a NUL byte instead of a newline.
-   Return the line's length, not counting the NUL byte.
-   On EOF, return a negative number.
+   Return true if successful, false if EOF.
    On error, report the error and exit.  */
-static ptrdiff_t
+static bool
 inputline(FILE *fp, char *buf, ptrdiff_t bufsize)
 {
   ptrdiff_t linelen = 0, ch;
@@ -1589,7 +1636,7 @@ inputline(FILE *fp, char *buf, ptrdiff_t bufsize)
 	exit(EXIT_FAILURE);
       }
       if (linelen == 0)
-	return -1;
+	return false;
       error(_("unterminated line"));
       exit(EXIT_FAILURE);
     }
@@ -1604,7 +1651,7 @@ inputline(FILE *fp, char *buf, ptrdiff_t bufsize)
     }
   }
   buf[linelen] = '\0';
-  return linelen;
+  return true;
 }
 
 static void
@@ -1626,13 +1673,14 @@ infile(int fnum, char const *name)
 	}
 	wantcont = false;
 	for (num = 1; ; ++num) {
-		ptrdiff_t linelen;
-		char buf[_POSIX2_LINE_MAX];
+		enum { bufsize_bound
+		  = (min(INT_MAX, min(PTRDIFF_MAX, SIZE_MAX))
+		     / FORMAT_LEN_GROWTH_BOUND) };
+		char buf[min(_POSIX2_LINE_MAX, bufsize_bound)];
 		int nfields;
 		char *fields[MAX_FIELDS];
 		eat(fnum, num);
-		linelen = inputline(fp, buf, sizeof buf);
-		if (linelen < 0)
+		if (!inputline(fp, buf, sizeof buf))
 		  break;
 		nfields = getfields(buf, fields,
 				    sizeof fields / sizeof *fields);
@@ -1704,15 +1752,15 @@ gethms(char const *string, char const *errstring)
 	  default: ok = false; break;
 	  case 8:
 	    ok = '0' <= xr && xr <= '9';
-	    /* fallthrough */
+	    ATTRIBUTE_FALLTHROUGH;
 	  case 7:
 	    ok &= ssx == '.';
 	    if (ok && noise)
 	      warning(_("fractional seconds rejected by"
 			" pre-2018 versions of zic"));
-	    /* fallthrough */
-	  case 5: ok &= mmx == ':'; /* fallthrough */
-	  case 3: ok &= hhx == ':'; /* fallthrough */
+	    ATTRIBUTE_FALLTHROUGH;
+	  case 5: ok &= mmx == ':'; ATTRIBUTE_FALLTHROUGH;
+	  case 3: ok &= hhx == ':'; ATTRIBUTE_FALLTHROUGH;
 	  case 1: break;
 	}
 	if (!ok) {
@@ -1742,7 +1790,7 @@ getsave(char *field, bool *isdst)
 {
   int dst = -1;
   zic_t save;
-  size_t fieldlen = strlen(field);
+  ptrdiff_t fieldlen = strlen(field);
   if (fieldlen != 0) {
     char *ep = field + fieldlen - 1;
     switch (*ep) {
@@ -1838,7 +1886,7 @@ inzsub(char **fields, int nfields, bool iscont)
 	register char *		cp;
 	char *			cp1;
 	struct zone z;
-	size_t format_len;
+	int format_len;
 	register int		i_stdoff, i_rule, i_format;
 	register int		i_untilyear, i_untilmonth;
 	register int		i_untilday, i_untiltime;
@@ -1924,7 +1972,7 @@ inzsub(char **fields, int nfields, bool iscont)
 }
 
 static zic_t
-getleapdatetime(char **fields, int nfields, bool expire_line)
+getleapdatetime(char **fields, bool expire_line)
 {
 	register const char *		cp;
 	register const struct lookup *	lp;
@@ -2002,7 +2050,7 @@ inleap(char **fields, int nfields)
   if (nfields != LEAP_FIELDS)
     error(_("wrong number of fields on Leap line"));
   else {
-    zic_t t = getleapdatetime(fields, nfields, false);
+    zic_t t = getleapdatetime(fields, false);
     if (0 <= t) {
       struct lookup const *lp = byword(fields[LP_ROLL], leap_types);
       if (!lp)
@@ -2030,7 +2078,7 @@ inexpires(char **fields, int nfields)
   else if (0 <= leapexpires)
     error(_("multiple Expires lines"));
   else
-    leapexpires = getleapdatetime(fields, nfields, true);
+    leapexpires = getleapdatetime(fields, true);
 }
 
 static void
@@ -2741,13 +2789,13 @@ abbroffset(char *buf, zic_t offset)
 
 static char const disable_percent_s[] = "";
 
-static size_t
+static ptrdiff_t
 doabbr(char *abbr, struct zone const *zp, char const *letters,
        bool isdst, zic_t save, bool doquotes)
 {
 	register char *	cp;
 	register char *	slashp;
-	register size_t	len;
+	ptrdiff_t len;
 	char const *format = zp->z_format;
 
 	slashp = strchr(format, '/');
@@ -2913,9 +2961,9 @@ stringzone(char *result, struct zone const *zpfirst, ptrdiff_t zonecount)
 	register ptrdiff_t		i;
 	register int			compat = 0;
 	register int			c;
-	size_t				len;
 	int				offsetlen;
 	struct rule			stdr, dstr;
+	ptrdiff_t len;
 	int dstcmp;
 	struct rule *lastrp[2] = { NULL, NULL };
 	struct zone zstr[2];
@@ -3048,8 +3096,10 @@ outzone(const struct zone *zpfirst, ptrdiff_t zonecount)
 
 	check_for_signal();
 
+	/* This cannot overflow; see FORMAT_LEN_GROWTH_BOUND.  */
 	max_abbr_len = 2 + max_format_len + max_abbrvar_len;
 	max_envvar_len = 2 * max_abbr_len + 5 * 9;
+
 	startbuf = emalloc(max_abbr_len + 1);
 	ab = emalloc(max_abbr_len + 1);
 	envvar = emalloc(max_envvar_len + 1);
@@ -3549,7 +3599,7 @@ lowerit(char a)
 }
 
 /* case-insensitive equality */
-static ATTRIBUTE_PURE bool
+ATTRIBUTE_REPRODUCIBLE static bool
 ciequal(register const char *ap, register const char *bp)
 {
 	while (lowerit(*ap) == lowerit(*bp++))
@@ -3558,7 +3608,7 @@ ciequal(register const char *ap, register const char *bp)
 	return false;
 }
 
-static ATTRIBUTE_PURE bool
+ATTRIBUTE_REPRODUCIBLE static bool
 itsabbr(register const char *abbr, register const char *word)
 {
 	if (lowerit(*abbr) != lowerit(*word))
@@ -3574,7 +3624,7 @@ itsabbr(register const char *abbr, register const char *word)
 
 /* Return true if ABBR is an initial prefix of WORD, ignoring ASCII case.  */
 
-static ATTRIBUTE_PURE bool
+ATTRIBUTE_REPRODUCIBLE static bool
 ciprefix(char const *abbr, char const *word)
 {
   do
@@ -3677,38 +3727,41 @@ getfields(char *cp, char **array, int arrayelts)
 	return nsubs;
 }
 
-static _Noreturn void
+ATTRIBUTE_NORETURN static void
 time_overflow(void)
 {
   error(_("time overflow"));
   exit(EXIT_FAILURE);
 }
 
-static ATTRIBUTE_PURE zic_t
+ATTRIBUTE_REPRODUCIBLE static zic_t
 oadd(zic_t t1, zic_t t2)
 {
-	if (t1 < 0 ? t2 < ZIC_MIN - t1 : ZIC_MAX - t1 < t2)
-	  time_overflow();
-	return t1 + t2;
+#ifdef ckd_add
+  zic_t sum;
+  if (!ckd_add(&sum, t1, t2))
+    return sum;
+#else
+  if (t1 < 0 ? ZIC_MIN - t1 <= t2 : t2 <= ZIC_MAX - t1)
+    return t1 + t2;
+#endif
+  time_overflow();
 }
 
-static ATTRIBUTE_PURE zic_t
+ATTRIBUTE_REPRODUCIBLE static zic_t
 tadd(zic_t t1, zic_t t2)
 {
-  if (t1 < 0) {
-    if (t2 < min_time - t1) {
-      if (t1 != min_time)
-	time_overflow();
-      return min_time;
-    }
-  } else {
-    if (max_time - t1 < t2) {
-      if (t1 != max_time)
-	time_overflow();
-      return max_time;
-    }
-  }
-  return t1 + t2;
+#ifdef ckd_add
+  zic_t sum;
+  if (!ckd_add(&sum, t1, t2) && min_time <= sum && sum <= max_time)
+    return sum;
+#else
+  if (t1 < 0 ? min_time - t1 <= t2 : t2 <= max_time - t1)
+    return t1 + t2;
+#endif
+  if (t1 == min_time || t1 == max_time)
+    return t1;
+  time_overflow();
 }
 
 /*
