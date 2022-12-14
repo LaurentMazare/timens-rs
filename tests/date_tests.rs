@@ -85,8 +85,7 @@ fn iter() {
     );
     for diff in [0, 1, 2, 7, 12, 23, 125, 365] {
         let up = lo + diff;
-        let dates: Vec<_> = lo.dates_until(up).collect();
-        assert_eq!(dates.len(), diff as usize + 1)
+        assert_eq!(lo.dates_until(up).count(), diff as usize + 1)
     }
 }
 

@@ -97,17 +97,17 @@ fn tz_daylightsaving() {
 #[test]
 fn tz_daylightsaving_nyc() {
     let tz = Tz::America__New_York;
-    let time = Time::from_str(&"2021-03-14 06:00Z").unwrap();
+    let time = Time::from_str("2021-03-14 06:00Z").unwrap();
     let (date, ofday) = time.to_date_ofday(tz);
     let time2 = Time::of_date_ofday(date, ofday, tz).unwrap();
     assert_eq!(time, time2);
     assert_eq!(time.to_string_tz(tz), "2021-03-14 01:00:00-05:00");
-    let time = Time::from_str(&"2021-03-14 06:59:59.9Z").unwrap();
+    let time = Time::from_str("2021-03-14 06:59:59.9Z").unwrap();
     let (date, ofday) = time.to_date_ofday(tz);
     let time2 = Time::of_date_ofday(date, ofday, tz).unwrap();
     assert_eq!(time, time2);
     assert_eq!(time.to_string_tz(tz), "2021-03-14 01:59:59.9-05:00");
-    let time = Time::from_str(&"2021-03-14 07:00Z").unwrap();
+    let time = Time::from_str("2021-03-14 07:00Z").unwrap();
     let (date, ofday) = time.to_date_ofday(tz);
     let time2 = Time::of_date_ofday(date, ofday, tz).unwrap();
     assert_eq!(time, time2);

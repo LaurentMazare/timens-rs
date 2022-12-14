@@ -1,5 +1,4 @@
 extern crate anyhow;
-use timens;
 
 const NB_ITERS: usize = 10_000_000;
 
