@@ -20,6 +20,12 @@ impl std::fmt::Debug for Time {
     }
 }
 
+impl std::fmt::Display for Time {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum TimeParseError {
     NoSpace,
