@@ -19,7 +19,7 @@ impl Add<Span> for OfDay {
     type Output = Self;
 
     fn add(self, other: Span) -> Self {
-        Self(self.0 + other.to_int_ns()).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
+        Self(self.0 + other.to_int_ns()).clamp(Self::START_OF_DAY, Self::START_OF_NEXT_DAY)
     }
 }
 
@@ -33,7 +33,7 @@ impl Sub<Span> for OfDay {
     type Output = Self;
 
     fn sub(self, other: Span) -> Self {
-        Self(self.0 - other.to_int_ns()).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
+        Self(self.0 - other.to_int_ns()).clamp(Self::START_OF_DAY, Self::START_OF_NEXT_DAY)
     }
 }
 
@@ -73,7 +73,7 @@ impl OfDay {
 
     /// Creates a `OfDay` based on a number of nanoseconds since midnight.
     pub fn of_ns_since_midnight(i: i64) -> Self {
-        Self(i).min(Self::START_OF_NEXT_DAY).max(Self::START_OF_DAY)
+        Self(i).clamp(Self::START_OF_DAY, Self::START_OF_NEXT_DAY)
     }
 
     /// The number of nanoseconds since midnight.

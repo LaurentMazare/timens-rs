@@ -188,6 +188,6 @@ fn main() {
 
     let table = table.build();
     let timezone_path = Path::new(&out_dir).join("timezone_data.rs");
-    let mut timezone_file = std::fs::File::create(&timezone_path).unwrap();
+    let mut timezone_file = std::fs::File::create(timezone_path).unwrap();
     write_timezone_file(&mut timezone_file, &table).unwrap();
 }

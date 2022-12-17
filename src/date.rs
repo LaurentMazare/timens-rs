@@ -427,7 +427,7 @@ impl Days {
 
     pub fn to_date(self) -> Result<Date, DateError> {
         let y = ((self.0 as i64 * 10_000 + 14_780) / 3_652_425) as i32;
-        let ddd = self.0 - Self::of_year(y).0 as i32;
+        let ddd = self.0 - Self::of_year(y).0;
         let (y, ddd) = if ddd < 0 {
             let y = y - 1;
             (y, self.0 - Self::of_year(y).0)
