@@ -1,4 +1,5 @@
 use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::str::from_utf8;
 
 // Same representation as OCaml Core.Date.t, i.e.
 // 2 bytes year, 1 byte month, 1 byte day
@@ -479,17 +480,20 @@ impl std::str::FromStr for Date {
     type Err = DateError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts: Vec<&str> = s.split('-').collect();
-        match parts[..] {
-            [y, m, d] => {
-                let y = u32::from_str(y)?;
-                let d = u8::from_str(d)?;
-                match Month::of_u8(u8::from_str(m)?) {
-                    Some(m) => Date::create(y, m, d),
-                    None => Err(DateError::ParseMonthError),
-                }
-            }
-            _ => Err(DateError::ParseError),
+        let s = s.as_bytes();
+        let (y_offset, m_offset, d_offset) = match s.len() {
+            8 => (0, 4, 6),
+            10 if s[4] == b'-' && s[7] == b'-' || s[4] == b'/' && s[7] == b'/' => (0, 5, 8),
+            _ => return Err(DateError::ParseError),
+        };
+        let y = from_utf8(&s[y_offset..y_offset + 4]).map_err(|_| DateError::ParseError)?;
+        let m = from_utf8(&s[m_offset..m_offset + 2]).map_err(|_| DateError::ParseError)?;
+        let d = from_utf8(&s[d_offset..d_offset + 2]).map_err(|_| DateError::ParseError)?;
+        let y = u32::from_str(y)?;
+        let d = u8::from_str(d)?;
+        match Month::of_u8(u8::from_str(m)?) {
+            Some(m) => Date::create(y, m, d),
+            None => Err(DateError::ParseMonthError),
         }
     }
 }

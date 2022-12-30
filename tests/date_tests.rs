@@ -60,6 +60,10 @@ fn create() {
                 assert_eq!(date.day(), d);
                 let date2 = Date::from_str(&date.to_string()).unwrap();
                 assert_eq!(date, date2);
+                let date2 = Date::from_str(&date.to_string_iso8601_basic()).unwrap();
+                assert_eq!(date, date2);
+                let date2 = Date::from_str(&date.to_string().replace('-', "/")).unwrap();
+                assert_eq!(date, date2);
                 tested_dates += 1;
             }
         }
