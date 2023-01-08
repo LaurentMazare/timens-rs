@@ -9,7 +9,7 @@ use crate::{Date, OfDay, Span, Tz, TzError, TzParseError};
 use std::ops::{Add, AddAssign, Rem, Sub, SubAssign};
 use std::str::FromStr;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "binio", derive(BinProtRead, BinProtWrite))]
 pub struct Time(i64);
 

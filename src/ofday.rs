@@ -1,6 +1,6 @@
 use crate::Span;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "binio", derive(binprot::macros::BinProtRead, binprot::macros::BinProtWrite))]
 pub struct OfDay(i64);
 

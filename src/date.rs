@@ -5,7 +5,7 @@ use std::str::from_utf8;
 // 2 bytes year, 1 byte month, 1 byte day
 // https://github.com/janestreet/core_kernel/blob/4244b42cac7d1ba834c93bdeda2e29bc7ecfa9aa/core/src/date0.ml
 /// Represents a date.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Date(u32);
 
 #[cfg(feature = "binio")]
@@ -49,7 +49,7 @@ pub const fn is_leap_year(year: u32) -> bool {
     year % 4 == 0 && year % 100 != 0 || year % 400 == 0
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DayOfWeek {
     Sun,
     Mon,
@@ -102,7 +102,7 @@ impl DayOfWeek {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "binio", derive(binprot::macros::BinProtRead, binprot::macros::BinProtWrite))]
 pub enum Month {
     Jan,
@@ -412,7 +412,7 @@ impl Date {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Days(i32);
 
 impl Days {
@@ -674,5 +674,17 @@ impl Date {
         F: Fn(Self) -> bool,
     {
         Self::business_days_between(self, up, is_business_day)
+    }
+}
+
+impl From<u32> for Date {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Date> for u32 {
+    fn from(value: Date) -> Self {
+        value.0
     }
 }
