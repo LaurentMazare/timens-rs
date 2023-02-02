@@ -90,28 +90,28 @@ impl std::fmt::Display for Span {
             let mut ns = ns.abs();
             if ns >= Self::DAY.0 {
                 let days = ns / Self::DAY.0;
-                write!(f, "{}d", days)?;
+                write!(f, "{days}d")?;
                 ns -= days * Self::DAY.0;
             }
             if ns >= Self::HR.0 {
                 let hr = ns / Self::HR.0;
-                write!(f, "{}h", hr)?;
+                write!(f, "{hr}h")?;
                 ns -= hr * Self::HR.0;
             }
             if ns >= Self::MIN.0 {
                 let min = ns / Self::MIN.0;
-                write!(f, "{}m", min)?;
+                write!(f, "{min}m")?;
                 ns -= min * Self::MIN.0;
             }
             if ns == 0 {
             } else if ns < 1_000 {
-                write!(f, "{}ns", ns)?
+                write!(f, "{ns}ns")?
             } else if ns < 1_000_000 {
                 write!(f, "{}", ns / 1000)?;
                 let rem_ns = ns % 1000;
                 if rem_ns != 0 {
                     let (rem_ns, width) = remove_trailing_zeros(rem_ns, 3);
-                    write!(f, ".{:0width$}", rem_ns, width = width)?;
+                    write!(f, ".{rem_ns:0width$}")?;
                 }
                 write!(f, "us")?;
             } else if ns < 1_000_000_000 {
@@ -119,7 +119,7 @@ impl std::fmt::Display for Span {
                 let rem_ns = ns % 1_000_000;
                 if rem_ns != 0 {
                     let (rem_ns, width) = remove_trailing_zeros(rem_ns, 6);
-                    write!(f, ".{:0width$}", rem_ns, width = width)?;
+                    write!(f, ".{rem_ns:0width$}")?;
                 }
                 write!(f, "ms")?;
             } else {
@@ -127,7 +127,7 @@ impl std::fmt::Display for Span {
                 let rem_ns = ns % 1_000_000_000;
                 if rem_ns != 0 {
                     let (rem_ns, width) = remove_trailing_zeros(rem_ns, 9);
-                    write!(f, ".{:0width$}", rem_ns, width = width)?;
+                    write!(f, ".{rem_ns:0width$}")?;
                 }
                 write!(f, "s")?;
             }
@@ -152,7 +152,7 @@ pub enum ParseSpanError {
 
 impl std::fmt::Display for ParseSpanError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

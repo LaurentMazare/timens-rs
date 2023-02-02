@@ -29,7 +29,7 @@ pub enum TzError {
 
 impl std::fmt::Display for TzError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -42,7 +42,7 @@ pub enum TzParseError {
 
 impl std::fmt::Display for TzParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

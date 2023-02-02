@@ -16,13 +16,13 @@ pub struct Time(i64);
 impl std::fmt::Debug for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let (date, ofday) = self.to_date_ofday_gmt();
-        write!(f, "{} {}Z", date, ofday)
+        write!(f, "{date} {ofday}Z")
     }
 }
 
 impl std::fmt::Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -39,7 +39,7 @@ pub enum TimeParseError {
 
 impl std::fmt::Display for TimeParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -250,7 +250,7 @@ impl Time {
     }
 
     pub fn to_string_gmt(self) -> String {
-        format!("{:?}", self)
+        format!("{self:?}")
     }
 
     pub fn write_tz<W: std::fmt::Write>(self, w: &mut W, tz: Tz) -> Result<(), std::fmt::Error> {
@@ -261,7 +261,7 @@ impl Time {
         let ofday = OfDay::of_ns_since_midnight(ns_since_epoch.rem_euclid(day_ns));
         let date = Date::of_days_since_epoch(days as i32);
         if offset_sec == 0 {
-            write!(w, "{} {}Z", date, ofday)
+            write!(w, "{date} {ofday}Z")
         } else {
             let (abs_offset, sign) =
                 if offset_sec < 0 { (-offset_sec, '-') } else { (offset_sec, '+') };
@@ -269,9 +269,9 @@ impl Time {
             let abs_offset = abs_offset / 60;
             let offset_min = abs_offset % 60;
             let offset_hr = abs_offset / 60;
-            write!(w, "{} {}{}{:02}:{:02}", date, ofday, sign, offset_hr, offset_min)?;
+            write!(w, "{date} {ofday}{sign}{offset_hr:02}:{offset_min:02}")?;
             if offset_sec != 0 {
-                write!(w, ":{:02}", offset_sec)?;
+                write!(w, ":{offset_sec:02}")?;
             }
             Ok(())
         }
@@ -346,7 +346,7 @@ mod sexp {
     impl rsexp::SexpOf for crate::Time {
         fn sexp_of(&self) -> Sexp {
             let (date, ofday) = self.to_date_ofday_gmt();
-            let ofday = format!("{}Z", ofday);
+            let ofday = format!("{ofday}Z");
             rsexp::SexpOf::sexp_of(&(date.to_string(), ofday))
         }
     }

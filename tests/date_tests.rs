@@ -79,12 +79,12 @@ fn iter() {
     assert_eq!(timens::Days::of_date(lo).day_of_week(), DayOfWeek::Thu);
     let dates: Vec<_> = lo.dates_until(up).collect();
     assert_eq!(
-        format!("{:?}", dates),
+        format!("{dates:?}"),
         "[2021-01-14, 2021-01-15, 2021-01-16, 2021-01-17, 2021-01-18, 2021-01-19, 2021-01-20]"
     );
     let dates: Vec<_> = lo.weekdays_until(up).collect();
     assert_eq!(
-        format!("{:?}", dates),
+        format!("{dates:?}"),
         "[2021-01-14, 2021-01-15, 2021-01-18, 2021-01-19, 2021-01-20]"
     );
     for diff in [0, 1, 2, 7, 12, 23, 125, 365] {
@@ -102,7 +102,7 @@ fn business_date() {
     assert_eq!((date + 2).round_backward_to_business_day(|d| d.is_weekday()), date + 2);
     let dates: Vec<_> = date.business_days_until(date + 30, |d| d.is_weekend()).collect();
     assert_eq!(
-        format!("{:?}", dates),
+        format!("{dates:?}"),
         "[2021-01-16, 2021-01-17, 2021-01-23, 2021-01-24, 2021-01-30, 2021-01-31, 2021-02-06, 2021-02-07, 2021-02-13, 2021-02-14]"
     );
     assert_eq!(

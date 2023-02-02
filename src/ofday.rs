@@ -61,7 +61,7 @@ impl Rem<Span> for OfDay {
 
 impl std::fmt::Display for OfDayError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -143,7 +143,7 @@ impl std::fmt::Display for OfDay {
         let sec = self.second();
         let ns = self.nanosecond();
         if ns == 0 {
-            write!(f, "{:02}:{:02}:{:02}", hr, min, sec)
+            write!(f, "{hr:02}:{min:02}:{sec:02}")
         } else {
             let mut ns = ns;
             let mut ns_width = 9;
@@ -151,7 +151,7 @@ impl std::fmt::Display for OfDay {
                 ns /= 10;
                 ns_width -= 1;
             }
-            write!(f, "{:02}:{:02}:{:02}.{:0ns_width$}", hr, min, sec, ns, ns_width = ns_width)
+            write!(f, "{hr:02}:{min:02}:{sec:02}.{ns:0ns_width$}")
         }
     }
 }
@@ -174,7 +174,7 @@ pub enum ParseOfDayError {
 
 impl std::fmt::Display for ParseOfDayError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 

@@ -4,7 +4,7 @@ const NB_ITERS: usize = 10_000_000;
 
 fn main() -> anyhow::Result<()> {
     let now = timens::Time::now();
-    println!("start: {:?}", now);
+    println!("start: {now:?}");
     for _i in 0..100 {
         let _now = timens::Time::now();
     }

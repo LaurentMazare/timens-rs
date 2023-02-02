@@ -67,7 +67,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     writeln!(f, "#[derive(Clone, Copy, PartialEq, Eq, Hash)]")?;
     writeln!(f, "pub enum Tz {{")?;
     for zone in &zones {
-        writeln!(f, "    /// {}", zone)?;
+        writeln!(f, "    /// {zone}")?;
         writeln!(f, "   {},", convert_bad_chars(zone))?;
     }
     writeln!(f, "}}\n")?;
@@ -77,7 +77,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     writeln!(f, "        match self {{")?;
     for zone in &zones {
         let zone_name = convert_bad_chars(zone);
-        writeln!(f, "            Tz::{} => \"{}\",", zone_name, zone)?;
+        writeln!(f, "            Tz::{zone_name} => \"{zone}\",")?;
     }
     writeln!(f, "        }}")?;
     writeln!(f, "    }}")?;
@@ -101,7 +101,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     writeln!(f, "        match s {{")?;
     for zone in &zones {
         let zone_name = convert_bad_chars(zone);
-        writeln!(f, "            \"{}\" => Ok(Tz::{}),", zone, zone_name)?;
+        writeln!(f, "            \"{zone}\" => Ok(Tz::{zone_name}),")?;
     }
     writeln!(f, "            _ => Err(TzParseError::UnknownZone(s.to_string())),")?;
     writeln!(f, "        }}")?;
@@ -114,7 +114,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     for zone in &zones {
         let zone_name = convert_bad_chars(zone);
         let timespans = table.timespans(zone).unwrap();
-        writeln!(f, "            Self::{} => {{", zone_name)?;
+        writeln!(f, "            Self::{zone_name} => {{")?;
         writeln!(f, "                const TZ: TzInfo = TzInfo {{")?;
         writeln!(
             f,
@@ -125,8 +125,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
         for (start, FixedTimespan { utc_offset, dst_offset, .. }) in timespans.rest {
             writeln!(
                 f,
-                "                    ({}, TzOffset {{ utc_offset: {}, dst_offset: {} }}),",
-                start, utc_offset, dst_offset
+                "                    ({start}, TzOffset {{ utc_offset: {utc_offset}, dst_offset: {dst_offset} }}),"
             )?;
         }
         writeln!(f, "                    ],")?;
@@ -142,7 +141,7 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
 }
 
 fn main() {
-    println!("cargo:rerun-if-env-changed={}", TIMENS_TZ_FILTER);
+    println!("cargo:rerun-if-env-changed={TIMENS_TZ_FILTER}");
 
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let parser = parse_zoneinfo::line::LineParser::new();
