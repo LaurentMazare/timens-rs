@@ -275,7 +275,7 @@
 /*
 ** Define HAVE_STDINT_H's default value here, rather than at the
 ** start, since __GLIBC__ and INTMAX_MAX's values depend on
-** previously-included files.  glibc 2.1 and Solaris 10 and later have
+** previously included files.  glibc 2.1 and Solaris 10 and later have
 ** stdint.h, even with pre-C99 compilers.
 */
 #if !defined HAVE_STDINT_H && defined __has_include
@@ -400,8 +400,10 @@ typedef unsigned long long uint_fast64_t;
 #ifndef UINTMAX_MAX
 # ifdef ULLONG_MAX
 typedef unsigned long long uintmax_t;
+#  define UINTMAX_MAX ULLONG_MAX
 # else
 typedef unsigned long uintmax_t;
+#  define UINTMAX_MAX ULONG_MAX
 # endif
 #endif
 
@@ -418,6 +420,14 @@ typedef unsigned long uintmax_t;
 #endif
 
 #endif /* PORT_TO_C89 */
+
+/* The maximum size of any created object, as a signed integer.
+   Although the C standard does not outright prohibit larger objects,
+   behavior is undefined if the result of pointer subtraction does not
+   fit into ptrdiff_t, and the code assumes in several places that
+   pointer subtraction works.  As a practical matter it's OK to not
+   support objects larger than this.  */
+#define INDEX_MAX ((ptrdiff_t) min(PTRDIFF_MAX, SIZE_MAX))
 
 /* Support ckd_add, ckd_sub, ckd_mul on C23 or recent-enough GCC-like
    hosts, unless compiled with -DHAVE_STDCKDINT_H=0 or with pre-C23 EDG.  */
@@ -543,7 +553,8 @@ typedef unsigned long uintmax_t;
 # endif
 #endif
 
-#if PORT_TO_C89 && __STDC_VERSION__ < 199901 && !defined restrict
+#if (__STDC_VERSION__ < 199901 && !defined restrict \
+     && (PORT_TO_C89 || defined _MSC_VER))
 # define restrict /* empty */
 #endif
 
@@ -796,7 +807,7 @@ ATTRIBUTE_REPRODUCIBLE time_t time2posix_z(timezone_t, time_t);
 ** Finally, some convenience items.
 */
 
-#define TYPE_BIT(type)	(sizeof(type) * CHAR_BIT)
+#define TYPE_BIT(type) (CHAR_BIT * (ptrdiff_t) sizeof(type))
 #define TYPE_SIGNED(type) (((type) -1) < 0)
 #define TWOS_COMPLEMENT(t) ((t) ~ (t) 0 < 0)
 
@@ -920,7 +931,7 @@ static_assert(! TYPE_SIGNED(time_t) || ! SIGNED_PADDING_CHECK_NEEDED
 #if HAVE_INCOMPATIBLE_CTIME_R
 #undef asctime_r
 #undef ctime_r
-char *asctime_r(struct tm const *, char *);
+char *asctime_r(struct tm const *restrict, char *restrict);
 char *ctime_r(time_t const *, char *);
 #endif /* HAVE_INCOMPATIBLE_CTIME_R */
 
