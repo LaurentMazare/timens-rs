@@ -276,9 +276,10 @@ Zone	PST8PDT		 -8:00	US	P%sT
 #  -10	Standard Alaska Time (AST)	Alaska-Hawaii standard time (AHST)
 #  -11	(unofficial) Nome (NST)		Bering standard time (BST)
 #
-# From Paul Eggert (2000-01-08), following a heads-up from Rives McDow:
-# Public law 106-564 (2000-12-23) introduced ... "Chamorro Standard Time"
+# From Paul Eggert (2023-01-23), from a 2001-01-08 heads-up from Rives McDow:
+# Public law 106-564 (2000-12-23) introduced "Chamorro standard time"
 # for time in Guam and the Northern Marianas.  See the file "australasia".
+# Also see 15 U.S.C. §263 <https://www.law.cornell.edu/uscode/text/15/263>.
 #
 # From Paul Eggert (2015-04-17):
 # HST and HDT are standardized abbreviations for Hawaii-Aleutian
@@ -595,7 +596,7 @@ Zone America/Los_Angeles -7:52:58 -	LMT	1883 Nov 18 20:00u
 # local times of other Alaskan locations so that they change simultaneously.
 
 # From Paul Eggert (2014-07-18):
-# One opinion of the early-1980s turmoil in Alaska over time zones and
+# One opinion of the early 1980s turmoil in Alaska over time zones and
 # daylight saving time appeared as graffiti on a Juneau airport wall:
 # "Welcome to Juneau.  Please turn your watch back to the 19th century."
 # See: Turner W. Alaska's four time zones now two. NY Times 1983-11-01.
@@ -666,6 +667,10 @@ Zone America/Los_Angeles -7:52:58 -	LMT	1883 Nov 18 20:00u
 # https://www.facebook.com/141055983004923/photos/607150969728753/
 # So they won't be waiting for Alaska to join them on 2019-03-10, but will
 # rather change their clocks twice in seven weeks.
+
+# From Paul Eggert (2023-01-23):
+# America/Adak is for the Aleutian Islands that are part of Alaska
+# and are west of 169.5° W.
 
 # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
 Zone America/Juneau	 15:02:19 -	LMT	1867 Oct 19 15:33:32

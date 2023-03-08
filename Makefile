@@ -35,22 +35,14 @@ DATAFORM=		main
 
 LOCALTIME=	Factory
 
-# The POSIXRULES macro controls interpretation of nonstandard and obsolete
-# POSIX-like TZ settings like TZ='EET-2EEST' that lack DST transition rules.
-# Such a setting uses the rules in a template file to determine
-# "spring forward" and "fall back" days and times; the environment
-# variable itself specifies UT offsets of standard and daylight saving time.
-#
+# The POSIXRULES macro controls interpretation of POSIX-like TZ
+# settings like TZ='EET-2EEST' that lack DST transition rules.
 # If POSIXRULES is '-', no template is installed; this is the default.
-#
 # Any other value for POSIXRULES is obsolete and should not be relied on, as:
 # * It does not work correctly in popular implementations such as GNU/Linux.
 # * It does not work even in tzcode, except for historical timestamps
 #   that precede the last explicit transition in the POSIXRULES file.
 #   Hence it typically does not work for current and future timestamps.
-# In short, software should avoid ruleless settings like TZ='EET-2EEST'
-# and so should not depend on the value of POSIXRULES.
-#
 # If, despite the above, you want a template for handling these settings,
 # you can change the line below (after finding the timezone you want in the
 # one of the $(TDATA) source files, or adding it to a source file).
@@ -63,7 +55,7 @@ LOCALTIME=	Factory
 POSIXRULES=	-
 
 # Also see TZDEFRULESTRING below, which takes effect only
-# if the time zone files cannot be accessed.
+# if POSIXRULES is '-' or if the template file cannot be accessed.
 
 
 # Installation locations.
@@ -258,7 +250,12 @@ LDLIBS=
 #  -DTZ_DOMAINDIR=\"/path\" to use "/path" for gettext directory;
 #	the default is system-supplied, typically "/usr/lib/locale"
 #  -DTZDEFRULESTRING=\",date/time,date/time\" to default to the specified
-#	DST transitions if the time zone files cannot be accessed
+#	DST transitions for POSIX-style TZ strings lacking them,
+#	in the usual case where POSIXRULES is '-'.  If not specified,
+#	TZDEFRULESTRING defaults to US rules for future DST transitions.
+#	This mishandles some past timestamps, as US DST rules have changed.
+#	It also mishandles settings like TZ='EET-2EEST' for eastern Europe,
+#	as Europe and US DST rules differ.
 #  -DUNINIT_TRAP if reading uninitialized storage can cause problems
 #	other than simply getting garbage data
 #  -DUSE_LTZ=0 to build zdump with the system time zone library
@@ -459,16 +456,13 @@ SAFE_CHARSET3=	'abcdefghijklmnopqrstuvwxyz{|}~'
 SAFE_CHARSET=	$(SAFE_CHARSET1)$(SAFE_CHARSET2)$(SAFE_CHARSET3)
 SAFE_CHAR=	'[]'$(SAFE_CHARSET)'-]'
 
-# These characters are Latin-1, and so are likely to be displayable
-# even in editors with limited character sets.
-UNUSUAL_OK_LATIN_1 = «°±»½¾×
-# This IPA symbol is represented in Unicode as the composition of
-# U+0075 and U+032F, and U+032F is not considered alphabetic by some
-# grep implementations that do not grok composition.
-UNUSUAL_OK_IPA = u̯
+# These non-alphabetic, non-ASCII printable characters are Latin-1,
+# and so are likely displayable even in editors like XEmacs 21
+# that have limited display capabilities.
+UNUSUAL_OK_LATIN_1 = ¡¢£¤¥¦§¨©«¬®¯°±²³´¶·¸¹»¼½¾¿×÷
 # Non-ASCII non-letters that OK_CHAR allows, as these characters are
 # useful in commentary.
-UNUSUAL_OK_CHARSET= $(UNUSUAL_OK_LATIN_1)$(UNUSUAL_OK_IPA)
+UNUSUAL_OK_CHARSET= $(UNUSUAL_OK_LATIN_1)
 
 # Put this in a bracket expression to match spaces.
 s = [:space:]
@@ -837,7 +831,7 @@ check_slashed_abbrs: $(TDATA_TO_CHECK)
 
 CHECK_CC_LIST = { n = split($$1,a,/,/); for (i=2; i<=n; i++) print a[1], a[i]; }
 
-check_sorted: backward backzone iso3166.tab zone.tab zone1970.tab
+check_sorted: backward backzone
 		$(AWK) '/^Link/ {printf "%.5d %s\n", g, $$3} !/./ {g++}' \
 		  backward | LC_ALL=C sort -cu
 		$(AWK) '/^Zone/ {print $$2}' backzone | LC_ALL=C sort -cu

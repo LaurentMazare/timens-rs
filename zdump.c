@@ -133,26 +133,37 @@ size_overflow(void)
 }
 
 /* Return A + B, exiting if the result would overflow either ptrdiff_t
-   or size_t.  */
+   or size_t.  A and B are both nonnegative.  */
 ATTRIBUTE_REPRODUCIBLE static ptrdiff_t
-sumsize(size_t a, size_t b)
+sumsize(ptrdiff_t a, ptrdiff_t b)
 {
 #ifdef ckd_add
   ptrdiff_t sum;
-  if (!ckd_add(&sum, a, b) && sum <= SIZE_MAX)
+  if (!ckd_add(&sum, a, b) && sum <= INDEX_MAX)
     return sum;
 #else
-  ptrdiff_t sum_max = min(PTRDIFF_MAX, SIZE_MAX);
-  if (a <= sum_max && b <= sum_max - a)
+  if (a <= INDEX_MAX && b <= INDEX_MAX - a)
     return a + b;
 #endif
   size_overflow();
 }
 
+/* Return the size of of the string STR, including its trailing NUL.
+   Report an error and exit if this would exceed INDEX_MAX which means
+   pointer subtraction wouldn't work.  */
+static ptrdiff_t
+xstrsize(char const *str)
+{
+  size_t len = strlen(str);
+  if (len < INDEX_MAX)
+    return len + 1;
+  size_overflow();
+}
+
 /* Return a pointer to a newly allocated buffer of size SIZE, exiting
-   on failure.  SIZE should be nonzero.  */
+   on failure.  SIZE should be positive.  */
 ATTRIBUTE_MALLOC static void *
-xmalloc(size_t size)
+xmalloc(ptrdiff_t size)
 {
   void *p = malloc(size);
   if (!p) {
@@ -242,7 +253,8 @@ tzalloc(char const *val)
 {
 # if HAVE_SETENV
   if (setenv("TZ", val, 1) != 0) {
-    perror("setenv");
+    char const *e = strerror(errno);
+    fprintf(stderr, _("%s: setenv: %s\n"), progname, e);
     exit(EXIT_FAILURE);
   }
   tzset();
@@ -254,7 +266,7 @@ tzalloc(char const *val)
   static ptrdiff_t fakeenv0size;
   void *freeable = NULL;
   char **env = fakeenv, **initial_environ;
-  size_t valsize = strlen(val) + 1;
+  ptrdiff_t valsize = xstrsize(val);
   if (fakeenv0size < valsize) {
     char **e = environ, **to;
     ptrdiff_t initial_nenvptrs = 1;  /* Counting the trailing NULL pointer.  */
@@ -262,10 +274,10 @@ tzalloc(char const *val)
     while (*e++) {
 #  ifdef ckd_add
       if (ckd_add(&initial_nenvptrs, initial_envptrs, 1)
-	  || SIZE_MAX < initial_envptrs)
+	  || INDEX_MAX < initial_envptrs)
 	size_overflow();
 #  else
-      if (initial_nenvptrs == min(PTRDIFF_MAX, SIZE_MAX) / sizeof *environ)
+      if (initial_nenvptrs == INDEX_MAX / sizeof *environ)
 	size_overflow();
       initial_nenvptrs++;
 #  endif
@@ -314,14 +326,16 @@ gmtzinit(void)
        "Link GMT GMT0" line in the "backward" file, and which
        should work on all POSIX platforms.  The rest of zdump does not
        use the "GMT" abbreviation that comes from this setting, so it
-       is OK to use "GMT" here rather than the more-modern "UTC" which
+       is OK to use "GMT" here rather than the modern "UTC" which
        would not work on platforms that omit the "backward" file.  */
     gmtz = tzalloc("GMT");
     if (!gmtz) {
       static char const gmt0[] = "GMT0";
       gmtz = tzalloc(gmt0);
       if (!gmtz) {
-	perror(gmt0);
+	char const *e = strerror(errno);
+	fprintf(stderr, _("%s: unknown timezone '%s': %s\n"),
+		progname, gmt0, e);
 	exit(EXIT_FAILURE);
       }
     }
@@ -401,7 +415,7 @@ abbrok(const char *const abbrp, const char *const zone)
 
 /* Return a time zone abbreviation.  If the abbreviation needs to be
    saved, use *BUF (of size *BUFALLOC) to save it, and return the
-   abbreviation in the possibly-reallocated *BUF.  Otherwise, just
+   abbreviation in the possibly reallocated *BUF.  Otherwise, just
    return the abbreviation.  Get the abbreviation from TMP.
    Exit on memory allocation failure.  */
 static char const *
@@ -411,13 +425,13 @@ saveabbr(char **buf, ptrdiff_t *bufalloc, struct tm const *tmp)
   if (HAVE_LOCALTIME_RZ)
     return ab;
   else {
-    size_t ablen = strlen(ab);
-    if (*bufalloc <= ablen) {
+    ptrdiff_t absize = xstrsize(ab);
+    if (*bufalloc < absize) {
       free(*buf);
 
       /* Make the new buffer at least twice as long as the old,
 	 to avoid O(N**2) behavior on repeated calls.  */
-      *bufalloc = sumsize(*bufalloc, ablen + 1);
+      *bufalloc = sumsize(*bufalloc, absize);
 
       *buf = xmalloc(*bufalloc);
     }
@@ -586,7 +600,9 @@ main(int argc, char *argv[])
 		struct tm tm, newtm;
 		bool tm_ok;
 		if (!tz) {
-		  perror(argv[i]);
+		  char const *e = strerror(errno);
+		  fprintf(stderr, _("%s: unknown timezone '%s': %s\n"),
+			  progname, argv[1], e);
 		  return EXIT_FAILURE;
 		}
 		if (now) {

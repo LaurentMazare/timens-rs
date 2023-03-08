@@ -321,6 +321,13 @@ Rule	Egypt	2007	only	-	Sep	Thu>=1	24:00	0	-
 # From Mina Samuel (2016-07-04):
 # Egyptian government took the decision to cancel the DST,
 
+# From Ahmad ElDardiry (2023-03-01):
+# Egypt officially announced today that daylight savings will be
+# applied from last Friday of April to last Thursday of October.
+# https://www.mena.org.eg/ar/news/dbcall/table/textnews/id/10044253
+# From Paul Eggert (2023-03-01):
+# Assume transitions are at 00:00 and 24:00 respectively.
+
 Rule	Egypt	2008	only	-	Aug	lastThu	24:00	0	-
 Rule	Egypt	2009	only	-	Aug	20	24:00	0	-
 Rule	Egypt	2010	only	-	Aug	10	24:00	0	-
@@ -330,6 +337,8 @@ Rule	Egypt	2014	only	-	May	15	24:00	1:00	S
 Rule	Egypt	2014	only	-	Jun	26	24:00	0	-
 Rule	Egypt	2014	only	-	Jul	31	24:00	1:00	S
 Rule	Egypt	2014	only	-	Sep	lastThu	24:00	0	-
+Rule	Egypt	2023	max	-	Apr	lastFri	 0:00	1:00	S
+Rule	Egypt	2023	max	-	Oct	lastThu	24:00	0	-
 
 # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
 		#STDOFF	2:05:08.9
@@ -429,7 +438,7 @@ Zone	Africa/Nairobi	2:27:16	-	LMT	1908 May
 # President William R. Tolbert, Jr., July 23, 1971-July 31, 1972.
 # Monrovia: Executive Mansion.
 #
-# Use the abbreviation "MMT" before 1972, as the more-accurate numeric
+# Use the abbreviation "MMT" before 1972, as the more accurate numeric
 # abbreviation "-004430" would be one byte over the POSIX limit.
 #
 # Zone	NAME		STDOFF	RULES	FORMAT	[UNTIL]
@@ -1210,7 +1219,7 @@ Zone	Africa/Windhoek	1:08:24 -	LMT	1892 Feb 8
 # https://libsysdigi.library.illinois.edu/ilharvest/Africana/Books2011-05/3064634/3064634_1914/3064634_1914_opt.pdf#page=27
 # "On January 1st [1914], a universal standard time for Nigeria was adopted,
 # viz., half an hour fast on Greenwich mean time, corresponding to the meridian
-# 7 [degrees] 30' E. long."
+# 7° 30' E. long."
 # Lloyd's Register of Shipping (1915) says "Hitherto the time observed in Lagos
 # was the local mean time. On 1st January, 1914, standard time for the whole of
 # Nigeria was introduced ... Lagos time has been advanced about 16 minutes
