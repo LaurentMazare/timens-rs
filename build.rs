@@ -47,7 +47,7 @@ fn re_filter() -> Option<regex::Regex> {
     match std::env::var(TIMENS_TZ_FILTER) {
         Ok(regex) => Some(regex::Regex::new(&regex).unwrap()),
         Err(std::env::VarError::NotPresent) => None,
-        Err(std::env::VarError::NotUnicode(_)) => panic!("invalid unicode in {}", TIMENS_TZ_FILTER),
+        Err(std::env::VarError::NotUnicode(_)) => panic!("invalid unicode in {TIMENS_TZ_FILTER}"),
     }
 }
 

@@ -57,21 +57,21 @@ fn tz_daylightsaving() {
             assert_eq!(t1.to_string_gmt(), "2021-10-31 00:00:00Z");
             assert_eq!(t2.to_string_gmt(), "2021-10-31 01:00:00Z");
         }
-        otherwise => panic!("unexpected {:?}", otherwise),
+        otherwise => panic!("unexpected {otherwise:?}"),
     }
     match of_date_ofday_ldn("2021-10-31", "01:30:00") {
         Err(TzError::TwoTimesInThisTz(t1, t2)) => {
             assert_eq!(t1.to_string_gmt(), "2021-10-31 00:30:00Z");
             assert_eq!(t2.to_string_gmt(), "2021-10-31 01:30:00Z");
         }
-        otherwise => panic!("unexpected {:?}", otherwise),
+        otherwise => panic!("unexpected {otherwise:?}"),
     }
     match of_date_ofday_ldn("2021-10-31", "01:59:59.999999999") {
         Err(TzError::TwoTimesInThisTz(t1, t2)) => {
             assert_eq!(t1.to_string_gmt(), "2021-10-31 00:59:59.999999999Z");
             assert_eq!(t2.to_string_gmt(), "2021-10-31 01:59:59.999999999Z");
         }
-        otherwise => panic!("unexpected {:?}", otherwise),
+        otherwise => panic!("unexpected {otherwise:?}"),
     }
     let time = of_date_ofday_ldn("2021-10-31", "02:00:00").unwrap();
     assert_eq!(time.to_string_gmt(), "2021-10-31 02:00:00Z");
@@ -82,15 +82,15 @@ fn tz_daylightsaving() {
     assert_eq!(time.to_string_gmt(), "2021-03-28 01:00:00Z");
     match of_date_ofday_ldn("2021-03-28", "01:59:59.999999999") {
         Err(TzError::NoTimeInThisTz) => (),
-        otherwise => panic!("unexpected {:?}", otherwise),
+        otherwise => panic!("unexpected {otherwise:?}"),
     }
     match of_date_ofday_ldn("2021-03-28", "01:00:00") {
         Err(TzError::NoTimeInThisTz) => (),
-        otherwise => panic!("unexpected {:?}", otherwise),
+        otherwise => panic!("unexpected {otherwise:?}"),
     }
     match of_date_ofday_ldn("2021-03-28", "01:27:00.123456789") {
         Err(TzError::NoTimeInThisTz) => (),
-        otherwise => panic!("unexpected {:?}", otherwise),
+        otherwise => panic!("unexpected {otherwise:?}"),
     }
 }
 
