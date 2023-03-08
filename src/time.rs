@@ -381,3 +381,32 @@ mod sexp {
         }
     }
 }
+
+#[cfg(feature = "with_serde")]
+mod with_serde {
+    use super::Time;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::str::FromStr;
+
+    impl Serialize for Time {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            if serializer.is_human_readable() {
+                self.to_string().serialize(serializer)
+            } else {
+                serializer.serialize_i64(self.0)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Time {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            if deserializer.is_human_readable() {
+                let s = String::deserialize(deserializer)?;
+                Time::from_str(&s).map_err(serde::de::Error::custom)
+            } else {
+                let v = i64::deserialize(deserializer)?;
+                Ok(Time(v))
+            }
+        }
+    }
+}

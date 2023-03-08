@@ -389,3 +389,32 @@ impl DivAssign<f64> for Span {
 
 #[cfg(feature = "sexp")]
 impl rsexp::UseToString for Span {}
+
+#[cfg(feature = "with_serde")]
+mod with_serde {
+    use super::Span;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use std::str::FromStr;
+
+    impl Serialize for Span {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            if serializer.is_human_readable() {
+                self.to_string().serialize(serializer)
+            } else {
+                serializer.serialize_i64(self.0)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Span {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            if deserializer.is_human_readable() {
+                let s = String::deserialize(deserializer)?;
+                Span::from_str(&s).map_err(serde::de::Error::custom)
+            } else {
+                let v = i64::deserialize(deserializer)?;
+                Ok(Span(v))
+            }
+        }
+    }
+}
