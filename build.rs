@@ -137,6 +137,30 @@ fn write_timezone_file(f: &mut std::fs::File, table: &Table) -> std::io::Result<
     writeln!(f, "    }}")?;
     writeln!(f, "}}\n")?;
 
+    // Serde support use a string representation so that this results in some appropriate errors if
+    // the list of supported timezone changes.
+    writeln!(f, "#[cfg(feature = \"with_serde\")]")?;
+    writeln!(f, "mod with_serde {{")?;
+    writeln!(f, "    use super::Tz;")?;
+    writeln!(f, "    use serde::{{Deserialize, Deserializer, Serialize, Serializer}};")?;
+    writeln!(f, "    use std::str::FromStr;")?;
+    writeln!(f, "    impl Serialize for Tz {{")?;
+    writeln!(
+        f,
+        "        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {{"
+    )?;
+    writeln!(f, "            self.to_string().serialize(serializer)")?;
+    writeln!(f, "        }}")?;
+    writeln!(f, "    }}")?;
+
+    writeln!(f, "    impl<'de> Deserialize<'de> for Tz {{")?;
+    writeln!(f, "        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {{")?;
+    writeln!(f, "            let s = String::deserialize(deserializer)?;")?;
+    writeln!(f, "            Tz::from_str(&s).map_err(serde::de::Error::custom)")?;
+    writeln!(f, "        }}")?;
+    writeln!(f, "    }}")?;
+    writeln!(f, "}}\n")?;
+
     Ok(())
 }
 
