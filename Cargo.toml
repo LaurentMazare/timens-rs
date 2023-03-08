@@ -1,8 +1,8 @@
 [package]
 name = "timens"
-version = "0.1.8"
+version = "0.1.9"
 authors = ["Laurent Mazare <lmazare@gmail.com>"]
-edition = "2018"
+edition = "2021"
 build = "build.rs"
 
 description = "Simple and efficient library for timestamp and date manipulation."
