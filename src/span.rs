@@ -14,7 +14,7 @@ macro_rules! span_conv {
             self.0 as f64 / $e as f64
         }
 
-        pub fn $of_fn_int(i: i64) -> Self {
+        pub const fn $of_fn_int(i: i64) -> Self {
             Self((i * $e) as i64)
         }
 
@@ -35,36 +35,37 @@ impl Span {
     span_conv!(to_hr, of_int_hr, of_hr, HR, 3_600_000_000_000i64);
     span_conv!(to_day, of_int_day, of_day, DAY, 24 * 3_600_000_000_000i64);
 
-    pub fn abs(self) -> Self {
+    pub const fn abs(self) -> Self {
         Self(self.0.abs())
     }
 
-    pub fn is_positive(self) -> bool {
+    pub const fn is_positive(self) -> bool {
         self.0 > 0
     }
 
-    pub fn is_non_negative(self) -> bool {
+    pub const fn is_non_negative(self) -> bool {
         self.0 >= 0
     }
 
-    pub fn is_negative(self) -> bool {
+    pub const fn is_negative(self) -> bool {
         self.0 < 0
     }
 
-    pub fn is_non_positive(self) -> bool {
+    pub const fn is_non_positive(self) -> bool {
         self.0 <= 0
     }
 
-    pub fn to_int_ns(self) -> i64 {
+    pub const fn to_int_ns(self) -> i64 {
         self.0
     }
 
-    pub fn prev_multiple(self, rhs: Self) -> Self {
+    pub const fn prev_multiple(self, rhs: Self) -> Self {
         Self(self.0 - self.0.rem_euclid(rhs.0))
     }
 
-    pub fn next_multiple(self, rhs: Self) -> Self {
-        (self - Self::NS).prev_multiple(rhs) + rhs
+    pub const fn next_multiple(self, rhs: Self) -> Self {
+        let s_minus = self.0 - 1;
+        Self(s_minus - s_minus.rem_euclid(rhs.0) + rhs.0)
     }
 }
 

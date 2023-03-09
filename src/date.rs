@@ -91,7 +91,7 @@ pub enum DayOfWeek {
 
 impl DayOfWeek {
     /// Conversion from an int, 0 for Sunday, 1 for Monday, etc.
-    pub fn of_u8(i: u8) -> Option<DayOfWeek> {
+    pub const fn of_u8(i: u8) -> Option<DayOfWeek> {
         match i {
             0 => Some(Self::Sun),
             1 => Some(Self::Mon),
@@ -105,7 +105,7 @@ impl DayOfWeek {
     }
 
     /// Conversion to an int, 0 for Sunday, 1 for Monday, etc.
-    pub fn to_u8(self) -> u8 {
+    pub const fn to_u8(self) -> u8 {
         match self {
             Self::Sun => 0,
             Self::Mon => 1,
@@ -118,7 +118,7 @@ impl DayOfWeek {
     }
 
     /// Returns true for any day except Saturday and Sunday.
-    pub fn is_weekday(self) -> bool {
+    pub const fn is_weekday(self) -> bool {
         match self {
             Self::Mon | Self::Tue | Self::Wed | Self::Thu | Self::Fri => true,
             Self::Sat | Self::Sun => false,
@@ -126,7 +126,7 @@ impl DayOfWeek {
     }
 
     /// Returns true for Saturday and Sunday.
-    pub fn is_weekend(self) -> bool {
+    pub const fn is_weekend(self) -> bool {
         !self.is_weekday()
     }
 }
@@ -165,7 +165,7 @@ impl Month {
     }
 
     /// Converts to an int, 1 for January, 2 for February, etc.
-    pub fn to_u8(self) -> u8 {
+    pub const fn to_u8(self) -> u8 {
         match self {
             Self::Jan => 1,
             Self::Feb => 2,
@@ -183,7 +183,7 @@ impl Month {
     }
 
     /// Converts from an int, 1 for January, 2 for February, etc.
-    pub fn of_u8(m: u8) -> Option<Self> {
+    pub const fn of_u8(m: u8) -> Option<Self> {
         match m {
             1 => Some(Self::Jan),
             2 => Some(Self::Feb),
@@ -233,12 +233,12 @@ impl std::error::Error for DateError {}
 
 impl Date {
     /// The year for this date.
-    pub fn year(self) -> u32 {
+    pub const fn year(self) -> u32 {
         self.0 >> 16
     }
 
     /// The month for this date as an int, between 1 and 12.
-    pub fn month_int(self) -> u8 {
+    pub const fn month_int(self) -> u8 {
         ((self.0 >> 8) & 255) as u8
     }
 
@@ -248,7 +248,7 @@ impl Date {
     }
 
     /// The day of the month for this date, as an int between 1 and 31.
-    pub fn day(self) -> u8 {
+    pub const fn day(self) -> u8 {
         (self.0 & 255) as u8
     }
 
@@ -445,11 +445,11 @@ impl Date {
 pub struct Days(i32);
 
 impl Days {
-    fn of_year(y: i32) -> Self {
+    const fn of_year(y: i32) -> Self {
         Days(365 * y + y / 4 + y / 400 - y / 100)
     }
 
-    pub fn of_date(date: Date) -> Days {
+    pub const fn of_date(date: Date) -> Days {
         let m = (date.month_int() as i32 + 9) % 12;
         let y = date.year() as i32 - m / 10;
         Days(Self::of_year(y).0 + (((m * 306) + 5) / 10) + date.day() as i32 - 1)

@@ -77,11 +77,11 @@ impl OfDay {
     }
 
     /// The number of nanoseconds since midnight.
-    pub fn to_ns_since_midnight(self) -> i64 {
+    pub const fn to_ns_since_midnight(self) -> i64 {
         self.0
     }
 
-    pub fn to_span_since_midnight(self) -> crate::Span {
+    pub const fn to_span_since_midnight(self) -> crate::Span {
         crate::Span::of_int_ns(self.to_ns_since_midnight())
     }
 
@@ -90,27 +90,32 @@ impl OfDay {
     }
 
     /// The hour in the day, between 0 and 23 (or 24 for the start of next day).
-    pub fn hour(self) -> i64 {
+    pub const fn hour(self) -> i64 {
         self.0 / 1_000_000_000 / 60 / 60
     }
 
     /// The minute, between 0 and 59.
-    pub fn minute(self) -> i64 {
+    pub const fn minute(self) -> i64 {
         (self.0 / 1_000_000_000 / 60) % 60
     }
 
     /// The second, between 0 and 59.
-    pub fn second(self) -> i64 {
+    pub const fn second(self) -> i64 {
         (self.0 / 1_000_000_000) % 60
     }
 
     /// The nanosecond, between 0 and 999_999_999.
-    pub fn nanosecond(self) -> i64 {
+    pub const fn nanosecond(self) -> i64 {
         self.0 % 1_000_000_000
     }
 
     /// Creates a new `OfDay` based on hour/minute/second/nanosecond.
-    pub fn create(hour: u8, minute: u8, second: u8, nanosecond: u32) -> Result<Self, OfDayError> {
+    pub const fn create(
+        hour: u8,
+        minute: u8,
+        second: u8,
+        nanosecond: u32,
+    ) -> Result<Self, OfDayError> {
         if hour >= 24 && !(hour == 24 && minute == 0 && second == 0 && nanosecond == 0) {
             Err(OfDayError::InvalidHour(hour))
         } else if minute >= 60 {

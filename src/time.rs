@@ -192,19 +192,19 @@ impl Time {
         Self::of_span_since_epoch(dt)
     }
 
-    pub fn to_span_since_epoch(self) -> Span {
+    pub const fn to_span_since_epoch(self) -> Span {
         Span::of_int_ns(self.0)
     }
 
-    pub fn of_span_since_epoch(span: Span) -> Self {
+    pub const fn of_span_since_epoch(span: Span) -> Self {
         Self(span.to_int_ns())
     }
 
-    pub fn to_int_ns_since_epoch(self) -> i64 {
+    pub const fn to_int_ns_since_epoch(self) -> i64 {
         self.0
     }
 
-    pub fn of_int_ns_since_epoch(ns: i64) -> Self {
+    pub const fn of_int_ns_since_epoch(ns: i64) -> Self {
         Self(ns)
     }
 
@@ -283,11 +283,11 @@ impl Time {
         s
     }
 
-    pub fn prev_multiple(self, rhs: Span) -> Self {
+    pub const fn prev_multiple(self, rhs: Span) -> Self {
         Self::of_span_since_epoch(self.to_span_since_epoch().prev_multiple(rhs))
     }
 
-    pub fn next_multiple(self, rhs: Span) -> Self {
+    pub const fn next_multiple(self, rhs: Span) -> Self {
         Self::of_span_since_epoch(self.to_span_since_epoch().next_multiple(rhs))
     }
 }
