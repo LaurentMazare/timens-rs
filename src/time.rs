@@ -1,7 +1,7 @@
 #[cfg(feature = "binio")]
 use binprot::macros::{BinProtRead, BinProtWrite};
 
-#[cfg(feature = "with-chrono")]
+#[cfg(feature = "with_chrono")]
 use chrono::{TimeZone, Timelike};
 
 use crate::{date, ofday};
@@ -99,29 +99,24 @@ fn parse_zone_offset(s: &str) -> Result<Span, TimeParseError> {
 
 impl Time {
     fn parse_ofday_with_zone(ofday_with_zone: &str, date: Date) -> Result<Self, TimeParseError> {
-        match ofday_with_zone.split_once('Z') {
-            Some((ofday, z)) if z.is_empty() => {
-                let ofday = OfDay::from_str(ofday)?;
-                return Ok(Self::of_date_ofday_gmt(date, ofday));
-            }
-            Some(_) | None => (),
-        };
-        if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('+') {
+        if let Some((ofday, "")) = ofday_with_zone.split_once('Z') {
+            let ofday = OfDay::from_str(ofday)?;
+            Ok(Self::of_date_ofday_gmt(date, ofday))
+        } else if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('+') {
             let ofday = OfDay::from_str(ofday)?;
             let zone_offset = parse_zone_offset(zone_offset)?;
-            return Ok(Self::of_date_ofday_gmt(date, ofday) + zone_offset);
-        }
-        if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('-') {
+            Ok(Self::of_date_ofday_gmt(date, ofday) + zone_offset)
+        } else if let Some((ofday, zone_offset)) = ofday_with_zone.split_once('-') {
             let ofday = OfDay::from_str(ofday)?;
             let zone_offset = parse_zone_offset(zone_offset)?;
-            return Ok(Self::of_date_ofday_gmt(date, ofday) - zone_offset);
-        }
-        if let Some((ofday, tz)) = ofday_with_zone.split_once(' ') {
+            Ok(Self::of_date_ofday_gmt(date, ofday) - zone_offset)
+        } else if let Some((ofday, tz)) = ofday_with_zone.split_once(' ') {
             let ofday = OfDay::from_str(ofday)?;
             let tz = Tz::from_str(tz)?;
-            return Ok(Self::of_date_ofday(date, ofday, tz)?);
+            Ok(Self::of_date_ofday(date, ofday, tz)?)
+        } else {
+            Err(TimeParseError::NoZone)
         }
-        Err(TimeParseError::NoZone)
     }
 }
 
@@ -292,7 +287,7 @@ impl Time {
     }
 }
 
-#[cfg(feature = "with-chrono")]
+#[cfg(feature = "with_chrono")]
 impl Time {
     pub fn to_naive_datetime(self) -> chrono::NaiveDateTime {
         let day_ns = Span::DAY.to_int_ns();

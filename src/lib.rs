@@ -16,7 +16,7 @@ pub use timezone_data::Tz;
 mod time;
 pub use time::*;
 
-#[cfg(feature = "with-chrono")]
+#[cfg(feature = "with_chrono")]
 use ::chrono;
-#[cfg(feature = "with-chrono")]
+#[cfg(feature = "with_chrono")]
 use ::chrono_tz;
