@@ -75,7 +75,7 @@ mod with_serde {
 
 /// Returns whether `year` is a leap year or not.
 pub const fn is_leap_year(year: u32) -> bool {
-    year % 4 == 0 && year % 100 != 0 || year % 400 == 0
+    year.is_multiple_of(4) && !year.is_multiple_of(100) || year.is_multiple_of(400)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
