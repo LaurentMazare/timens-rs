@@ -123,13 +123,15 @@ impl Time {
 impl std::str::FromStr for Time {
     type Err = TimeParseError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.split_once(' ') {
-            None => Err(TimeParseError::NoSpace),
-            Some((date, ofday_with_zone)) => {
-                let date = Date::from_str(date)?;
-                Self::parse_ofday_with_zone(ofday_with_zone, date)
-            }
-        }
+        let (date, ofday_with_zone) = match s.split_once(' ') {
+            None => match s.split_once('T') {
+                Some((date, ofday_with_zone)) => (date, ofday_with_zone),
+                None => Err(TimeParseError::NoSpace)?,
+            },
+            Some((date, ofday_with_zone)) => (date, ofday_with_zone),
+        };
+        let date = Date::from_str(date)?;
+        Self::parse_ofday_with_zone(ofday_with_zone, date)
     }
 }
 

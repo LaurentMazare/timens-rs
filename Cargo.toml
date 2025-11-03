@@ -1,6 +1,6 @@
 [package]
 name = "timens"
-version = "0.1.9"
+version = "0.1.10"
 authors = ["Laurent Mazare <lmazare@gmail.com>"]
 edition = "2021"
 build = "build.rs"
