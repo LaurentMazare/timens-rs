@@ -1,6 +1,6 @@
 .\" This file is in the public domain, so clarified as of
 .\" 1996-06-05 by Arthur David Olson.
-.TH TZFILE 5
+.TH tzfile 5 "" "Time Zone Database"
 .SH NAME
 tzfile \- timezone information
 .SH DESCRIPTION
@@ -11,13 +11,11 @@ tzfile \- timezone information
 .de q
 \\$3\*(lq\\$1\*(rq\\$2
 ..
-.ie \n(.g .ds - \f(CR-\fP
-.el .ds - \-
 The timezone information files used by
 .BR tzset (3)
 are typically found under a directory with a name like
 .IR /usr/share/zoneinfo .
-These files use the format described in Internet RFC 8536.
+These files use the format described in Internet RFC 9636.
 Each file is a sequence of 8-bit bytes.
 In a file, a binary integer is represented by a sequence of one or
 more bytes in network order (bigendian, or high-order byte first),
@@ -26,23 +24,24 @@ a signed binary integer is represented using two's complement,
 and a boolean is represented by a one-byte binary integer that is
 either 0 (false) or 1 (true).
 The format begins with a 44-byte header containing the following fields:
-.IP * 2
+.RS "\w'  'u"
+.IP \(bu "\w'\(bu  'u"
 The magic four-byte ASCII sequence
 .q "TZif"
 identifies the file as a timezone information file.
-.IP *
+.IP \(bu
 A byte identifying the version of the file's format
 (as of 2021, either an ASCII NUL,
 .q "2",
 .q "3",
 or
 .q "4" ).
-.IP *
+.IP \(bu
 Fifteen bytes containing zeros reserved for future use.
-.IP *
+.IP \(bu
 Six four-byte integer values, in the following order:
-.RS
-.TP
+.RS "\w'\(bu    'u"
+.TP "\w'  'u"
 .B tzh_ttisutcnt
 The number of UT/local indicators stored in the file.
 (UT is Universal Time.)
@@ -65,17 +64,19 @@ in the file (must not be zero).
 The number of bytes of time zone abbreviation strings
 stored in the file.
 .RE
+.RE
 .PP
 The above header is followed by the following fields, whose lengths
 depend on the contents of the header:
-.IP * 2
+.RS "\w'  'u"
+.IP \(bu "\w'\(bu  'u"
 .B tzh_timecnt
 four-byte signed integer values sorted in ascending order.
 These values are written in network byte order.
 Each is used as a transition time (as returned by
 .BR time (2))
 at which the rules for computing local time change.
-.IP *
+.IP \(bu
 .B tzh_timecnt
 one-byte unsigned integer values;
 each one but the last tells which of the different types of local time types
@@ -83,22 +84,22 @@ described in the file is associated with the time period
 starting with the same-indexed transition time
 and continuing up to but not including the next transition time.
 (The last time type is present only for consistency checking with the
-POSIX-style TZ string described below.)
+proleptic TZ string described below.)
 These values serve as indices into the next field.
-.IP *
+.IP \(bu
 .B tzh_typecnt
 .B ttinfo
 entries, each defined as follows:
-.in +.5i
+.in +2
 .sp
 .nf
-.ta .5i +\w'unsigned char\0\0'u
+.ta \w'\0\0\0\0'u +\w'unsigned char\0'u
 struct ttinfo {
 	int32_t	tt_utoff;
 	unsigned char	tt_isdst;
 	unsigned char	tt_desigidx;
 };
-.in -.5i
+.in
 .fi
 .sp
 Each structure is written as a four-byte signed integer value for
@@ -120,7 +121,7 @@ and
 serves as an index into the array of time zone abbreviation bytes
 that follow the
 .B ttinfo
-entries in the file; if the designated string is "\*-00", the
+entries in the file; if the designated string is "\-00", the
 .B ttinfo
 entry is a placeholder indicating that local time is unspecified.
 The
@@ -132,18 +133,18 @@ Also, in realistic applications
 is in the range [\-89999, 93599] (i.e., more than \-25 hours and less
 than 26 hours); this allows easy support by implementations that
 already support the POSIX-required range [\-24:59:59, 25:59:59].
-.IP *
+.IP \(bu
 .B tzh_charcnt
 bytes that represent time zone designations,
 which are null-terminated byte strings, each indexed by the
 .B tt_desigidx
-values mentioned above.
+values mentioned above, and each corresponding to a time zone abbreviation.
 The byte strings can overlap if one is a suffix of the other.
 The encoding of these strings is not specified.
-.IP *
+.IP \(bu
 .B tzh_leapcnt
 pairs of four-byte values, written in network byte order;
-the first value of each pair gives the nonnegative time
+the first value of each pair gives the non-negative time
 (as returned by
 .BR time (2))
 at which a leap second occurs or at which the leap second table expires;
@@ -156,7 +157,7 @@ Each pair denotes one leap second, either positive or negative,
 except that if the last pair has the same correction as the previous one,
 the last pair denotes the leap second table's expiration time.
 Each leap second is at the end of a UTC calendar month.
-The first leap second has a nonnegative occurrence time,
+The first leap second has a non-negative occurrence time,
 and is a positive leap second if and only if its correction is positive;
 the correction for each leap second after the first differs
 from the previous leap second by either 1 for a positive leap second,
@@ -167,32 +168,34 @@ otherwise, for timestamps before the first occurrence time,
 the leap-second correction is zero if the first pair's correction is 1 or \-1,
 and is unspecified otherwise (which can happen only in files
 truncated at the start).
-.IP *
+.IP \(bu
 .B tzh_ttisstdcnt
 standard/wall indicators, each stored as a one-byte boolean;
 they tell whether the transition times associated with local time types
 were specified as standard time or local (wall clock) time.
-.IP *
+.IP \(bu
 .B tzh_ttisutcnt
 UT/local indicators, each stored as a one-byte boolean;
 they tell whether the transition times associated with local time types
 were specified as UT or local time.
 If a UT/local indicator is set, the corresponding standard/wall indicator
 must also be set.
+.RE
 .PP
 The standard/wall and UT/local indicators were designed for
 transforming a TZif file's transition times into transitions appropriate
-for another time zone specified via a POSIX-style TZ string that lacks rules.
-For example, when TZ="EET\*-2EEST" and there is no TZif file "EET\*-2EEST",
+for another time zone specified via
+a proleptic TZ string that lacks rules.
+For example, when TZ="EET\-2EEST" and there is no TZif file "EET\-2EEST",
 the idea was to adapt the transition times from a TZif file with the
 well-known name "posixrules" that is present only for this purpose and
 is a copy of the file "Europe/Brussels", a file with a different UT offset.
-POSIX does not specify this obsolete transformational behavior,
+POSIX does not specify the details of this obsolete transformational behavior,
 the default rules are installation-dependent, and no implementation
 is known to support this feature for timestamps past 2037,
 so users desiring (say) Greek time should instead specify
 TZ="Europe/Athens" for better historical coverage, falling back on
-TZ="EET\*-2EEST,M3.5.0/3,M10.5.0/4" if POSIX conformance is required
+TZ="EET\-2EEST,M3.5.0/3,M10.5.0/4" if POSIX conformance is required
 and older timestamps need not be handled accurately.
 .PP
 The
@@ -211,13 +214,15 @@ the above header and data are followed by a second header and data,
 identical in format except that
 eight bytes are used for each transition time or leap second time.
 (Leap second counts remain four bytes.)
-After the second header and data comes a newline-enclosed,
-POSIX-TZ-environment-variable-style string for use in handling instants
+After the second header and data comes a newline-enclosed string
+in the style of the contents of a proleptic TZ,
+for use in handling instants
 after the last transition time stored in the file
 or for all instants if the file has no transitions.
-The POSIX-style TZ string is empty (i.e., nothing between the newlines)
-if there is no POSIX-style representation for such instants.
-If nonempty, the POSIX-style TZ string must agree with the local time
+The TZ string is empty (i.e., nothing between the newlines)
+if there is no proleptic representation for such instants.
+.PP
+If non-empty, the TZ string must agree with the local time
 type after the last transition time if present in the eight-byte data;
 for example, given the string
 .q "WET0WEST,M3.5.0/1,M10.5.0"
@@ -225,17 +230,22 @@ then if a last transition time is in July, the transition's local time
 type must specify a daylight-saving time abbreviated
 .q "WEST"
 that is one hour east of UT.
+.PP
+The TZ string can contain time zone abbreviations and UT offsets that
+do not appear elsewhere in the TZif file.
+.PP
 Also, if there is at least one transition, time type 0 is associated
 with the time period from the indefinite past up to but not including
 the earliest transition time.
 .SS Version 3 format
-For version-3-format timezone files, the POSIX-TZ-style string may
-use two minor extensions to the POSIX TZ format, as described in
-.BR newtzset (3).
-First, the hours part of its transition times may be signed and range from
-\-167 through 167 instead of the POSIX-required unsigned values
+For version-3-format timezone files, a TZ string (see
+.BR newtzset (3))
+may use the following POSIX.1-2024 extensions to POSIX.1-2017:
+First, as in TZ="<\-02>2<\-01>,M3.5.0/\-1,M10.5.0/0",
+the hours part of its transition times may be signed and range from
+\-167 through 167 instead of being limited to unsigned values
 from 0 through 24.
-Second, DST is in effect all year if it starts
+Second, as in TZ="XXX3EDT4,0/0,J365/23", DST is in effect all year if it starts
 January 1 at 00:00 and ends December 31 at 24:00 plus the difference
 between daylight saving and standard time.
 .SS Version 4 format
@@ -284,14 +294,18 @@ time, TZif readers should either refuse to process
 post-expiration timestamps, or process them as if the expiration
 time did not exist (possibly with an error indication).
 .PP
-Time zone designations should consist of at least three (3)
+Time zone abbreviations should consist of at least three (3)
 and no more than six (6) ASCII characters from the set of
 alphanumerics,
-.q "\*-",
+.q "\-",
 and
 .q "+".
 This is for compatibility with POSIX requirements for
 time zone abbreviations.
+.PP
+A numeric time zone abbreviation should match the UT offset.
+For example, "+0530" should be used only if the UT offset is 5.5 hours
+ahead of UT, and "\-00" should be used only if the UT offset is zero.
 .PP
 When reading a version 2 or higher file, readers
 should ignore the version 1 header and data block except for
@@ -311,16 +325,18 @@ through 60 instead of the usual 59; the UTC offset is unaffected.
 This section documents common problems in reading or writing TZif files.
 Most of these are problems in generating TZif files for use by
 older readers.
-The goals of this section are:
-.IP * 2
-to help TZif writers output files that avoid common
+The goals of this section are to help:
+.RS "\w'  'u"
+.IP \(bu "\w'\(bu  'u"
+TZif writers output files that avoid common
 pitfalls in older or buggy TZif readers,
-.IP *
-to help TZif readers avoid common pitfalls when reading
+.IP \(bu
+TZif readers avoid common pitfalls when reading
 files generated by future TZif writers, and
-.IP *
-to help any future specification authors see what sort of
+.IP \(bu
+any future specification authors see what sort of
 problems arise when the TZif format is changed.
+.RE
 .PP
 When new versions of the TZif format have been defined, a
 design goal has been that a reader can successfully use a TZif
@@ -329,27 +345,37 @@ reader was designed for.
 When complete compatibility was not achieved, an attempt was
 made to limit glitches to rarely used timestamps and allow
 simple partial workarounds in writers designed to generate
-new-version data useful even for older-version readers.
+newer-version data useful even for older-version readers.
 This section attempts to document these compatibility issues and
-workarounds, as well as to document other common bugs in
+workarounds as well as documenting other common bugs in
 readers.
 .PP
 Interoperability problems with TZif include the following:
-.IP * 2
+.RS "\w'  'u"
+.IP \(bu "\w'\(bu  'u"
 Some readers examine only version 1 data.
 As a partial workaround, a writer can output as much version 1
 data as possible.
 However, a reader should ignore version 1 data, and should use
 version 2+ data even if the reader's native timestamps have only
 32 bits.
-.IP *
+.IP \(bu
 Some readers designed for version 2 might mishandle
 timestamps after a version 3 or higher file's last transition, because
-they cannot parse extensions to POSIX in the TZ-like string.
+they cannot parse the POSIX.1-2024 extensions to POSIX.1-2017
+in the proleptic TZ string.
 As a partial workaround, a writer can output more transitions
 than necessary, so that only far-future timestamps are
 mishandled by version 2 readers.
-.IP *
+.IP \(bu
+Some readers might mishandle timestamps after a file's last transition,
+because they require that all abbreviations or UT offsets
+in the proleptic TZ string must also occur somewhere in the file's tables
+of time zone designations and local time type records.
+As a workaround, a writer can output more transitions than necessary,
+so that the other tables contain duplicates of the proleptic TZ string's
+abbreviations and offsets.
+.IP \(bu
 Some readers designed for version 2 do not support
 permanent daylight saving time with transitions after 24:00
 \(en e.g., a TZ string
@@ -362,41 +388,53 @@ for two time zones east, e.g.,
 for a time zone with a never-used standard time (XXX, \-03)
 and negative daylight saving time (EDT, \-04) all year.
 Alternatively,
-as a partial workaround a writer can substitute standard time
+as a partial workaround, a writer can substitute standard time
 for the next time zone east \(en e.g.,
 .q "AST4"
 for permanent
 Atlantic Standard Time (\-04).
-.IP *
-Some readers designed for version 2 or 3, and that require strict
-conformance to RFC 8536, reject version 4 files whose leap second
-tables are truncated at the start or that end in expiration times.
-.IP *
+.IP \(bu
+Some readers designed for version 2 or 3 and that require strict
+conformance to RFC 9636 reject version 4 files whose leap second
+tables are truncated at the start or end in expiration times.
+.IP \(bu
 Some readers ignore the footer, and instead predict future
 timestamps from the time type of the last transition.
 As a partial workaround, a writer can output more transitions
 than necessary.
-.IP *
+.IP \(bu
+Some stripped-down readers ignore everything but the footer,
+and use its proleptic TZ string to calculate all timestamps.
+Although this approach often works for current and future timestamps,
+it obviously has problems with past timestamps,
+and even for current timestamps it can fail for settings like
+TZ="Africa/Casablanca".  This corresponds to a TZif file
+containing explicit transitions through the year 2087,
+followed by a footer containing the TZ string
+.q <+01>\-1 ,
+which should be used only for timestamps after the last
+explicit transition.
+.IP \(bu
 Some readers do not use time type 0 for timestamps before
 the first transition, in that they infer a time type using a
 heuristic that does not always select time type 0.
 As a partial workaround, a writer can output a dummy (no-op)
 first transition at an early time.
-.IP *
+.IP \(bu
 Some readers mishandle timestamps before the first
-transition that has a timestamp not less than \-2**31.
+transition that has a timestamp that is not less than \-2**31.
 Readers that support only 32-bit timestamps are likely to be
 more prone to this problem, for example, when they process
 64-bit transitions only some of which are representable in 32
 bits.
 As a partial workaround, a writer can output a dummy
 transition at timestamp \-2**31.
-.IP *
+.IP \(bu
 Some readers mishandle a transition if its timestamp has
 the minimum possible signed 64-bit value.
 Timestamps less than \-2**59 are not recommended.
-.IP *
-Some readers mishandle POSIX-style TZ strings that
+.IP \(bu
+Some readers mishandle proleptic TZ strings that
 contain
 .q "<"
 or
@@ -407,38 +445,38 @@ or
 .q ">"
 for time zone abbreviations containing only alphabetic
 characters.
-.IP *
+.IP \(bu
 Many readers mishandle time zone abbreviations that contain
 non-ASCII characters.
 These characters are not recommended.
-.IP *
+.IP \(bu
 Some readers may mishandle time zone abbreviations that
-contain fewer than 3 or more than 6 characters, or that
+contain fewer than 3 or more than 6 characters or that
 contain ASCII characters other than alphanumerics,
-.q "\*-",
+.q "\-",
 and
 .q "+".
 These abbreviations are not recommended.
-.IP *
+.IP \(bu
 Some readers mishandle TZif files that specify
 daylight-saving time UT offsets that are less than the UT
 offsets for the corresponding standard time.
 These readers do not support locations like Ireland, which
-uses the equivalent of the POSIX TZ string
-.q "IST\*-1GMT0,M10.5.0,M3.5.0/1",
+uses the equivalent of the TZ string
+.q "IST\-1GMT0,M10.5.0,M3.5.0/1",
 observing standard time
 (IST, +01) in summer and daylight saving time (GMT, +00) in winter.
 As a partial workaround, a writer can output data for the
-equivalent of the POSIX TZ string
+equivalent of the TZ string
 .q "GMT0IST,M3.5.0/1,M10.5.0",
 thus swapping standard and daylight saving time.
 Although this workaround misidentifies which part of the year
 uses daylight saving time, it records UT offsets and time zone
 abbreviations correctly.
-.IP *
+.IP \(bu
 Some readers generate ambiguous timestamps for positive leap seconds
 that occur when the UTC offset is not a multiple of 60 seconds.
-For example, in a timezone with UTC offset +01:23:45 and with
+For example, with UTC offset +01:23:45 and
 a positive leap second 78796801 (1972-06-30 23:59:60 UTC), some readers will
 map both 78796800 and 78796801 to 01:23:45 local time the next day
 instead of mapping the latter to 01:23:46, and they will map 78796815 to
@@ -446,38 +484,41 @@ instead of mapping the latter to 01:23:46, and they will map 78796815 to
 This has not yet been a practical problem, since no civil authority
 has observed such UTC offsets since leap seconds were
 introduced in 1972.
+.RE
 .PP
 Some interoperability problems are reader bugs that
 are listed here mostly as warnings to developers of readers.
-.IP * 2
+.RS "\w'  'u"
+.IP \(bu "\w'\(bu  'u"
 Some readers do not support negative timestamps.
 Developers of distributed applications should keep this
 in mind if they need to deal with pre-1970 data.
-.IP *
+.IP \(bu
 Some readers mishandle timestamps before the first
-transition that has a nonnegative timestamp.
+transition that has a non-negative timestamp.
 Readers that do not support negative timestamps are likely to
 be more prone to this problem.
-.IP *
+.IP \(bu
 Some readers mishandle time zone abbreviations like
-.q "\*-08"
+.q "\-08"
 that contain
 .q "+",
-.q "\*-",
+.q "\-",
 or digits.
-.IP *
+.IP \(bu
 Some readers mishandle UT offsets that are out of the
 traditional range of \-12 through +12 hours, and so do not
 support locations like Kiritimati that are outside this
 range.
-.IP *
+.IP \(bu
 Some readers mishandle UT offsets in the range [\-3599, \-1]
-seconds from UT, because they integer-divide the offset by
+seconds from UT because they integer-divide the offset by
 3600 to get 0 and then display the hour part as
 .q "+00".
-.IP *
+.IP \(bu
 Some readers mishandle UT offsets that are not a multiple
 of one hour, or of 15 minutes, or of 1 minute.
+.RE
 .SH SEE ALSO
 .BR time (2),
 .BR localtime (3),
@@ -487,10 +528,10 @@ of one hour, or of 15 minutes, or of 1 minute.
 .BR zic (8).
 .PP
 Olson A, Eggert P, Murchison K. The Time Zone Information Format (TZif).
-2019 Feb.
-.UR https://\:datatracker.ietf.org/\:doc/\:html/\:rfc8536
-Internet RFC 8536
+October 2024.
+.UR https://\:www.rfc-editor.org/\:rfc/\:rfc9636
+Internet RFC 9636
 .UE
-.UR https://\:doi.org/\:10.17487/\:RFC8536
-doi:10.17487/RFC8536
+.UR https://\:doi.org/\:10.17487/\:RFC9636
+doi:10.17487/RFC9636
 .UE .
